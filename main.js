@@ -95,10 +95,23 @@ gridHelper.position.y = 0.01;
 scene.add(gridHelper);
 
 
-// --- Interaction Logic (Mountain Building) ---
+// --- Interaction Logic (Mountain & Rain) ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let isDrawing = false;
+
+// Brush cursor (blue line circle)
+const cursorGeo = new THREE.RingGeometry(2.3, 2.7, 32);
+const cursorMat = new THREE.MeshBasicMaterial({
+    color: 0x4facfe,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8,
+    depthTest: false // Ensures it's always visible on top of terrain
+});
+const cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
+cursorMesh.rotation.x = -Math.PI / 2;
+scene.add(cursorMesh);
 
 window.addEventListener('pointerdown', (e) => {
     if (e.button === 0) isDrawing = true; // Left click
@@ -107,8 +120,6 @@ window.addEventListener('pointerup', () => {
     isDrawing = false;
 });
 window.addEventListener('pointermove', (event) => {
-    if (!isDrawing) return;
-
     // Calculate mouse position in normalized device coordinates (-1 to +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -119,7 +130,16 @@ window.addEventListener('pointermove', (event) => {
     const intersects = raycaster.intersectObject(terrain);
 
     if (intersects.length > 0) {
-        raiseTerrain(intersects[0].point);
+        // Move the cursor ring to the intersection point
+        cursorMesh.position.copy(intersects[0].point);
+        cursorMesh.position.y += 0.5; // Float slightly above the ground
+        cursorMesh.visible = true;
+
+        if (isDrawing) {
+            raiseTerrain(intersects[0].point);
+        }
+    } else {
+        cursorMesh.visible = false;
     }
 });
 
@@ -145,39 +165,71 @@ function raiseTerrain(point) {
 
         if (distance < radius) {
             let idx = i / 3;
+            const maxHeight = 15.0; // Maximum terrain height cap
+            const currentH = positions[i + 1];
+
             // Use a smooth bell curve (Gaussian-like) for the raise profile
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), 2);
-            positions[i + 1] += strength * falloff;
+
+            // Soften raising strength near the peak: the higher we are, the less we can raise
+            // This naturally creates a gentle dome shape instead of a spike
+            const heightFactor = Math.max(0, 1.0 - (currentH / maxHeight) * (currentH / maxHeight));
+            positions[i + 1] = Math.min(maxHeight, currentH + strength * falloff * heightFactor);
 
             // Raised terrain becomes soft sand
-            hardness[idx] -= strength * falloff;
+            hardness[idx] -= strength * falloff * heightFactor;
             hardness[idx] = Math.max(0.0, hardness[idx]);
 
             changed = true;
 
-            // Color mapping based on height: ground=grass, mountain=sand
+            // Raised terrain is always sand color
             const colors = geometry.attributes.color.array;
-            let h = positions[i + 1];
-            // Blend from grass to sand as it gets higher
-            let blend = Math.min(1.0, Math.max(0.0, h / 2.0));
-
-            // If it's already rock (eroded), preserve some darkness
-            let rScale = colors[i] / (blend > 0.5 ? colorSand.r : colorGrass.r);
-            rScale = Math.min(1.0, rScale); // Rough estimate of rockiness
-
-            colors[i] = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend) * rScale;
-            colors[i + 1] = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend) * rScale;
-            colors[i + 2] = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend) * rScale;
+            colors[i] = colorSand.r;
+            colors[i + 1] = colorSand.g;
+            colors[i + 2] = colorSand.b;
         }
     }
 
     if (changed) {
+        slumpTerrain(); // Prevent spikes by limiting neighbor height difference
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals(); // Recalculate lighting shading
 
         // Also update water geometry immediately so it doesn't float
         updateWaterMesh();
+    }
+}
+
+// Prevent spiky terrain by collapsing steep slopes between neighbors
+function slumpTerrain() {
+    const positions = geometry.attributes.position.array;
+    const maxSlope = 1.4; // Max allowed height diff between adjacent cells
+    const slumpRate = 0.4; // How fast excess collapses (0=none, 1=instant)
+
+    for (let z = 1; z < segments; z++) {
+        for (let x = 1; x < segments; x++) {
+            let idx = (z * (segments + 1) + x);
+            let h = positions[idx * 3 + 1];
+
+            // Check all 4 neighbors
+            let neighbors = [
+                idx - 1, idx + 1,
+                idx - (segments + 1), idx + (segments + 1)
+            ];
+
+            for (let nIdx of neighbors) {
+                let nH = positions[nIdx * 3 + 1];
+                let diff = h - nH;
+                if (diff > maxSlope) {
+                    // Excess slope — collapse towards neighbor
+                    let transfer = (diff - maxSlope) * slumpRate * 0.5;
+                    positions[idx * 3 + 1] -= transfer;
+                    positions[nIdx * 3 + 1] += transfer;
+                    h -= transfer;
+                }
+            }
+        }
     }
 }
 
@@ -234,17 +286,25 @@ class WaterParticle {
 }
 
 function spawnRain() {
-    // When holding R, add water randomly to the center of the grid
-    for (let i = 0; i < 10; i++) {
-        let gridX = Math.floor(segments / 2 + (Math.random() - 0.5) * 20);
-        let gridZ = Math.floor(segments / 2 + (Math.random() - 0.5) * 20);
+    // Make sure we have a valid mouse coordinate
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(terrain);
 
-        let idx = gridZ * (segments + 1) + gridX;
-        let pidx = idx * 3;
+    if (intersects.length > 0) {
+        const point = intersects[0].point;
 
-        // Only rain on mountains
-        if (geometry.attributes.position.array[pidx + 1] > 1.0) {
-            waterDepths[idx] += 0.2;
+        // Add water in a small radius around the mouse pointer
+        for (let i = 0; i < 20; i++) {
+            let rx = point.x + (Math.random() - 0.5) * 5;
+            let rz = point.z + (Math.random() - 0.5) * 5;
+
+            let gridX = Math.round((rx + terrainWidth / 2) / terrainWidth * segments);
+            let gridZ = Math.round((rz + terrainDepth / 2) / terrainDepth * segments);
+
+            if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
+                let idx = gridZ * (segments + 1) + gridX;
+                waterDepths[idx] += 0.2;
+            }
         }
     }
 }
@@ -434,6 +494,7 @@ function updateSimulation() {
     updateWaterMesh();
 
     if (geometryNeedsUpdate) {
+        slumpTerrain(); // Keep terrain slope natural
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals();
