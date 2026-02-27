@@ -1,0 +1,38 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+#ui-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(15, 15, 25, 0.8);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    pointer-events: none; /* Let clicks pass through to the canvas */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    color: #4facfe;
+}
+
+p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+}
