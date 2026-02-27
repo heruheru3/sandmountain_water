@@ -36,14 +36,15 @@ scene.add(dirLight);
 // --- Terrain Generation (Plane) ---
 const terrainWidth = 100;
 const terrainDepth = 100;
-const segments = 100; // Resolution of the grid
+const segments = 100; // Resolution of the grid (reverted for performance)
 
 const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, segments, segments);
 geometry.rotateX(-Math.PI / 2); // Lay flat on XZ plane
 
 // Color settings
-const colorSand = new THREE.Color(0xdeb887);
-const colorRock = new THREE.Color(0x736d65);
+const colorGrass = new THREE.Color(0x3a5f0b); // Hard ground / Grass (Base)
+const colorSand = new THREE.Color(0xdeb887);  // Mountain
+const colorRock = new THREE.Color(0x736d65);  // Eroded rock
 
 const material = new THREE.MeshStandardMaterial({
     vertexColors: true, // Enable vertex colors for erosion visualization
@@ -54,13 +55,35 @@ const material = new THREE.MeshStandardMaterial({
 });
 
 const terrain = new THREE.Mesh(geometry, material);
+terrain.receiveShadow = true;
+terrain.castShadow = true;
 scene.add(terrain);
 
-// Initialize vertex colors
+// --- Dynamic Water System (Pools) ---
+const waterPlaneGeo = new THREE.PlaneGeometry(terrainWidth, terrainDepth, segments, segments);
+waterPlaneGeo.rotateX(-Math.PI / 2);
+const waterPlaneMat = new THREE.MeshStandardMaterial({
+    color: 0x3a86ff,
+    transparent: true,
+    opacity: 0.6,
+    roughness: 0.2, // Make it look a bit shiny/liquid
+    metalness: 0.1,
+    flatShading: false,
+    depthWrite: false
+});
+const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
+scene.add(waterPlane);
+
+const waterDepths = new Float32Array((segments + 1) * (segments + 1));
+const nextWaterDepths = new Float32Array((segments + 1) * (segments + 1));
+const hardness = new Float32Array((segments + 1) * (segments + 1)); // 1.0 = hard, 0.0 = soft
+
+// Initialize vertex colors and hardness (Base is Grass/Hard Ground)
 const positions = geometry.attributes.position.array;
 const colors = [];
 for (let i = 0; i < positions.length / 3; i++) {
-    colors.push(colorSand.r, colorSand.g, colorSand.b);
+    colors.push(colorGrass.r, colorGrass.g, colorGrass.b);
+    hardness[i] = 1.0; // Ground starts very hard
 }
 geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
 
@@ -106,7 +129,7 @@ window.addEventListener('pointermove', (event) => {
 function raiseTerrain(point) {
     const positions = geometry.attributes.position.array;
     const radius = 5; // Brush radius
-    const strength = 1.0; // Brush strength
+    const strength = 0.2; // Brush strength (reduced for slower building)
 
     let changed = false;
 
@@ -121,16 +144,30 @@ function raiseTerrain(point) {
         const distance = Math.sqrt(dx * dx + dz * dz);
 
         if (distance < radius) {
+            let idx = i / 3;
             // Use a smooth bell curve (Gaussian-like) for the raise profile
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), 2);
             positions[i + 1] += strength * falloff;
+
+            // Raised terrain becomes soft sand
+            hardness[idx] -= strength * falloff;
+            hardness[idx] = Math.max(0.0, hardness[idx]);
+
             changed = true;
 
-            // Revert back to sand color when building mountain
+            // Color mapping based on height: ground=grass, mountain=sand
             const colors = geometry.attributes.color.array;
-            colors[i] = colorSand.r;     // R
-            colors[i + 1] = colorSand.g; // G
-            colors[i + 2] = colorSand.b; // B
+            let h = positions[i + 1];
+            // Blend from grass to sand as it gets higher
+            let blend = Math.min(1.0, Math.max(0.0, h / 2.0));
+
+            // If it's already rock (eroded), preserve some darkness
+            let rScale = colors[i] / (blend > 0.5 ? colorSand.r : colorGrass.r);
+            rScale = Math.min(1.0, rScale); // Rough estimate of rockiness
+
+            colors[i] = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend) * rScale;
+            colors[i + 1] = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend) * rScale;
+            colors[i + 2] = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend) * rScale;
         }
     }
 
@@ -138,29 +175,38 @@ function raiseTerrain(point) {
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals(); // Recalculate lighting shading
+
+        // Also update water geometry immediately so it doesn't float
+        updateWaterMesh();
     }
+}
+
+function updateWaterMesh() {
+    const tPos = geometry.attributes.position.array;
+    const wPos = waterPlaneGeo.attributes.position.array;
+
+    for (let i = 0; i < waterDepths.length; i++) {
+        const depth = waterDepths[i];
+        if (depth > 0.01) { // If there's water
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth; // Water surface is terrain height + depth
+        } else {
+            // Hide deeper below terrain to prevent z-fighting / flickering 
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] - 0.5;
+        }
+    }
+    waterPlaneGeo.computeVertexNormals(); // Smooth lighting
+    waterPlaneGeo.attributes.position.needsUpdate = true;
 }
 
 
 // --- Water Simulation System ---
-const MAX_PARTICLES = 1000;
+const waterGeo = new THREE.PlaneGeometry(0, 0); // Dummy to remove error
+// We don't use instanced mesh anymore
+const MAX_PARTICLES = 0;
 let waterParticles = [];
 
-// Visual representation of water
-const waterGeo = new THREE.SphereGeometry(0.3, 8, 8);
-const waterMat = new THREE.MeshBasicMaterial({ color: 0x4facfe, transparent: true, opacity: 0.7 });
-const waterInstancedMesh = new THREE.InstancedMesh(waterGeo, waterMat, MAX_PARTICLES);
-waterInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-scene.add(waterInstancedMesh);
-
-// Hide all instances initially
-const dummy = new THREE.Object3D();
-for (let i = 0; i < MAX_PARTICLES; i++) {
-    dummy.position.set(0, -100, 0);
-    dummy.updateMatrix();
-    waterInstancedMesh.setMatrixAt(i, dummy.matrix);
-}
-waterInstancedMesh.instanceMatrix.needsUpdate = true;
+// Remove Particle mesh (clean up scene)
+// scene.remove(waterInstancedMesh); // This line is now commented out as waterInstancedMesh is removed
 
 let isRaining = false;
 window.addEventListener('keydown', (e) => {
@@ -188,15 +234,18 @@ class WaterParticle {
 }
 
 function spawnRain() {
-    if (waterParticles.length >= MAX_PARTICLES) return;
+    // When holding R, add water randomly to the center of the grid
+    for (let i = 0; i < 10; i++) {
+        let gridX = Math.floor(segments / 2 + (Math.random() - 0.5) * 20);
+        let gridZ = Math.floor(segments / 2 + (Math.random() - 0.5) * 20);
 
-    // Spawn drop at a random location slightly above the center area
-    const rx = (Math.random() - 0.5) * 40;
-    const rz = (Math.random() - 0.5) * 40;
+        let idx = gridZ * (segments + 1) + gridX;
+        let pidx = idx * 3;
 
-    // Only spawn if there is a mountain (elevation > 1)
-    if (getElevation(rx, rz) > 1.0) {
-        waterParticles.push(new WaterParticle(rx, rz));
+        // Only rain on mountains
+        if (geometry.attributes.position.array[pidx + 1] > 1.0) {
+            waterDepths[idx] += 0.2;
+        }
     }
 }
 
@@ -223,116 +272,166 @@ function getGradient(x, z) {
     return new THREE.Vector3(hx0 - hx1, 0, hz0 - hz1); // Gradient points downhill
 }
 
+// Grid-state arrays for sediment (same size as waterDepths)
+const sediment = new Float32Array((segments + 1) * (segments + 1));
+const nextSediment = new Float32Array((segments + 1) * (segments + 1));
+
 function updateSimulation() {
     if (isRaining) {
-        for (let i = 0; i < 5; i++) spawnRain(); // Spawn 5 drops per frame
+        spawnRain();
     }
 
-    const dt = 0.016; // fixed timestep approx
-    const dt_ero = 0.3; // erosion rate multiplier
-    const friction = 0.05;
-    const sedimentCapacityFactor = 4.0;
-    const depositionRate = 0.1;
-
-    let geometryNeedsUpdate = false;
+    const dt = 0.05;
     const positions = geometry.attributes.position.array;
     const colors = geometry.attributes.color.array;
+    let geometryNeedsUpdate = false;
 
-    for (let i = waterParticles.length - 1; i >= 0; i--) {
-        let p = waterParticles[i];
-        if (!p.active) continue;
+    // 1. Fluid Flow (Pipe Model / Cellular Automaton based on SWE concepts)
+    // Copy current state
+    for (let i = 0; i < waterDepths.length; i++) {
+        nextWaterDepths[i] = waterDepths[i];
+        nextSediment[i] = sediment[i];
+    }
 
-        p.life++;
-        if (p.life > 300) { p.active = false; continue; } // Max lifespan
+    // Arrays to store flow out of each cell (left, right, bottom, top)
+    const flux = new Float32Array(waterDepths.length * 4);
 
-        // Calculate flow direction (downhill gradient)
-        let grad = getGradient(p.pos.x, p.pos.z);
+    const dx = terrainWidth / segments;
+    const g = 9.81;
+    const friction = 0.05;
 
-        // Update direction and velocity
-        p.dir.add(grad.multiplyScalar(dt));
-        p.dir.normalize();
+    // Calculate Flux (Outflow)
+    for (let z = 1; z < segments; z++) {
+        for (let x = 1; x < segments; x++) {
+            let idx = z * (segments + 1) + x;
+            let d = waterDepths[idx];
+            if (d <= 0.001) continue;
 
-        // Move particle
-        let nextX = p.pos.x + p.dir.x * p.speed;
-        let nextZ = p.pos.z + p.dir.z * p.speed;
+            let h = positions[idx * 3 + 1] + d; // Total head (terrain + water)
 
-        // Out of bounds check
-        if (nextX < -terrainWidth / 2 || nextX > terrainWidth / 2 || nextZ < -terrainDepth / 2 || nextZ > terrainDepth / 2) {
-            p.active = false;
-            continue;
-        }
+            // Neighbors: left(0), right(1), bottom(2), top(3)
+            let offsets = [-1, 1, -(segments + 1), (segments + 1)];
 
-        let currentH = getElevation(p.pos.x, p.pos.z);
-        let nextH = getElevation(nextX, nextZ);
-        let dh = currentH - nextH; // Height difference (positive if going downhill)
+            let totalDh = 0;
+            let dhs = [0, 0, 0, 0];
 
-        // Accelerate going downhill, decelerate otherwise
-        if (dh > 0) {
-            p.speed += 1.0 * dt; // Gravity
-        } else {
-            p.speed -= 2.0 * dt; // Friction on flat/uphill
-        }
-        p.speed = Math.max(0.1, p.speed - friction); // Minimum speed to prevent getting stuck infinitely
+            for (let i = 0; i < 4; i++) {
+                let nIdx = idx + offsets[i];
+                let nH = positions[nIdx * 3 + 1] + waterDepths[nIdx];
+                let dh = h - nH;
+                if (dh > 0) {
+                    dhs[i] = dh;
+                    totalDh += dh;
+                }
+            }
 
-        p.pos.x = nextX;
-        p.pos.z = nextZ;
-        p.pos.y = nextH;
+            if (totalDh > 0) {
+                // Distribute volume proportionally to slope
+                let maxFlow = d * 0.15; // Slower drain to prevent checkboard jaggedness/instability
 
-        // Erosion / Deposition Logic
-        let capacity = Math.max(0, dh * p.speed * p.volume * sedimentCapacityFactor);
+                for (let i = 0; i < 4; i++) {
+                    if (dhs[i] > 0) {
+                        let flow = (dhs[i] / totalDh) * maxFlow;
+                        let nIdx = idx + offsets[i];
 
-        // Find the nearest vertex to modify
-        const gridX = Math.round((p.pos.x + terrainWidth / 2) / terrainWidth * segments);
-        const gridZ = Math.round((p.pos.z + terrainDepth / 2) / terrainDepth * segments);
-        if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
-            let idx = (gridZ * (segments + 1) + gridX) * 3;
+                        nextWaterDepths[idx] -= flow;
+                        nextWaterDepths[nIdx] += flow;
 
-            if (p.sediment < capacity) {
-                // Erode: pick up sediment
-                let amountToErode = Math.min((capacity - p.sediment) * dt_ero, dh * 0.5);
-                p.sediment += amountToErode;
-                positions[idx + 1] -= amountToErode;
+                        // Advect sediment with water flow
+                        if (sediment[idx] > 0) {
+                            let sedimentFlow = (flow / d) * sediment[idx];
+                            nextSediment[idx] -= sedimentFlow;
+                            nextSediment[nIdx] += sedimentFlow;
+                        }
 
-                // Color mapping: make eroded parts darker (rockier)
-                colors[idx] = Math.max(colorRock.r, colors[idx] - 0.05);
-                colors[idx + 1] = Math.max(colorRock.g, colors[idx + 1] - 0.05);
-                colors[idx + 2] = Math.max(colorRock.b, colors[idx + 2] - 0.05);
-
-                geometryNeedsUpdate = true;
-
-            } else {
-                // Deposit: drop sediment
-                let amountToDeposit = (p.sediment - capacity) * depositionRate;
-                p.sediment -= amountToDeposit;
-                positions[idx + 1] += amountToDeposit;
-
-                // Color mapping: make deposited parts sandy again
-                colors[idx] = Math.min(colorSand.r, colors[idx] + 0.02);
-                colors[idx + 1] = Math.min(colorSand.g, colors[idx + 1] + 0.02);
-                colors[idx + 2] = Math.min(colorSand.b, colors[idx + 2] + 0.02);
-
-                geometryNeedsUpdate = true;
+                        // Track flux for erosion
+                        flux[idx * 4 + i] = flow;
+                    }
+                }
             }
         }
-
-        // Update visual instance matrix
-        dummy.position.copy(p.pos);
-        dummy.position.y += 0.3; // float slightly above
-        dummy.updateMatrix();
-        waterInstancedMesh.setMatrixAt(i, dummy.matrix);
     }
 
-    // Clean up dead particles
-    waterParticles = waterParticles.filter(p => p.active);
+    // 2. Erosion and Deposition based on Flow
+    for (let z = 1; z < segments; z++) {
+        for (let x = 1; x < segments; x++) {
+            let idx = z * (segments + 1) + x;
 
-    // Hide unused instances
-    for (let i = waterParticles.length; i < MAX_PARTICLES; i++) {
-        dummy.position.set(0, -100, 0);
-        dummy.updateMatrix();
-        waterInstancedMesh.setMatrixAt(i, dummy.matrix);
+            // Calculate total flux crossing this cell
+            let totalFlowOut = flux[idx * 4 + 0] + flux[idx * 4 + 1] + flux[idx * 4 + 2] + flux[idx * 4 + 3];
+            let waterLevel = nextWaterDepths[idx];
+
+            if (waterLevel > 0.01 && totalFlowOut > 0.001) {
+                // Fast flow causes erosion, slow flow deposits
+                let velocity = totalFlowOut / (waterLevel * dx);
+                let slope = Math.abs(positions[idx * 3 + 1] - Math.max(
+                    positions[(idx - 1) * 3 + 1],
+                    positions[(idx + 1) * 3 + 1],
+                    positions[(idx - (segments + 1)) * 3 + 1],
+                    positions[(idx + (segments + 1)) * 3 + 1]
+                ));
+
+                let sedimentCapacity = Math.max(0, slope * velocity * 2.0); // Simple capacity formula
+                let currentSediment = nextSediment[idx];
+
+                if (currentSediment < sedimentCapacity && slope > 0.05) {
+                    // Erode
+                    let amountToErode = Math.min((sedimentCapacity - currentSediment) * 0.1, 0.05);
+
+                    // Scale erosion by how soft the ground is (0.01 for hard, 1.0 for soft)
+                    let erosionFactor = 1.0 - hardness[idx] * 0.99;
+                    amountToErode *= erosionFactor;
+
+                    let targetHeight = positions[idx * 3 + 1] - amountToErode;
+
+                    if (targetHeight > -1.0) { // Bedrock limit
+                        positions[idx * 3 + 1] -= amountToErode;
+                        nextSediment[idx] += amountToErode;
+
+                        // Rock color
+                        colors[idx * 3] = Math.max(colorRock.r, colors[idx * 3] - 0.05);
+                        colors[idx * 3 + 1] = Math.max(colorRock.g, colors[idx * 3 + 1] - 0.05);
+                        colors[idx * 3 + 2] = Math.max(colorRock.b, colors[idx * 3 + 2] - 0.05);
+                        geometryNeedsUpdate = true;
+                    }
+                } else if (currentSediment > sedimentCapacity) {
+                    // Deposit
+                    let amountToDeposit = (currentSediment - sedimentCapacity) * 0.1;
+
+                    // Prevent building above water level
+                    let maxAllowed = Math.max(0, waterLevel);
+                    amountToDeposit = Math.min(amountToDeposit, maxAllowed);
+
+                    positions[idx * 3 + 1] += amountToDeposit;
+                    nextSediment[idx] -= amountToDeposit;
+
+                    // Deposited sand is soft
+                    hardness[idx] -= amountToDeposit * 2.0;
+                    hardness[idx] = Math.max(0.0, hardness[idx]);
+
+                    // Deposit color: grass if low, sand if high
+                    let h = positions[idx * 3 + 1];
+                    let blend = Math.min(1.0, Math.max(0.0, h / 2.0));
+                    let targetR = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend);
+                    let targetG = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend);
+                    let targetB = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend);
+
+                    colors[idx * 3] = Math.min(targetR, colors[idx * 3] + 0.02);
+                    colors[idx * 3 + 1] = Math.min(targetG, colors[idx * 3 + 1] + 0.02);
+                    colors[idx * 3 + 2] = Math.min(targetB, colors[idx * 3 + 2] + 0.02);
+                    geometryNeedsUpdate = true;
+                }
+            }
+        }
     }
 
-    waterInstancedMesh.instanceMatrix.needsUpdate = true;
+    // Apply exact state updates and evaporation
+    for (let i = 0; i < waterDepths.length; i++) {
+        waterDepths[i] = Math.max(0, nextWaterDepths[i] - 0.0001); // global evaporation
+        sediment[i] = Math.max(0, nextSediment[i]);
+    }
+
+    updateWaterMesh();
 
     if (geometryNeedsUpdate) {
         geometry.attributes.position.needsUpdate = true;
