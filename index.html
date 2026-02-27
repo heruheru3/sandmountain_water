@@ -11,9 +11,23 @@
 <body>
     <div id="ui-container">
         <h1>Sand Mountain Erosion</h1>
-        <p>1. <strong>Left Click & Drag</strong> to build a mountain.</p>
-        <p>2. <strong>Middle Click & Drag</strong> to rotate camera.</p>
-        <p>3. <strong>Press and Hold 'R'</strong> to make it rain and erode the mountain!</p>
+        <p>🖱️ <strong>Left Drag</strong>: Build mountain</p>
+        <p>⇧ <strong>Shift+Drag</strong>: Dig hole</p>
+        <p>🔵 <strong>Middle Drag</strong>: Rotate camera</p>
+        <p>💧 <strong>Hold R</strong>: Make it rain</p>
+        <div class="slider-row">
+            <label for="rainRadius">Rain Radius: <span id="rainRadiusVal">1</span></label>
+            <input type="range" id="rainRadius" min="1" max="20" value="1" step="0.5">
+        </div>
+        <div class="slider-row">
+            <label for="rainAmount">Rain Amount: <span id="rainAmountVal">1</span></label>
+            <input type="range" id="rainAmount" min="1" max="60" value="1" step="1">
+        </div>
+        <div class="slider-row">
+            <label for="mountainRadius">Mountain Radius: <span id="mountainRadiusVal">15</span></label>
+            <input type="range" id="mountainRadius" min="1" max="20" value="15" step="0.5">
+        </div>
+        <button id="resetBtn">Reset Terrain & Water</button>
     </div>
     <script type="importmap">
         {

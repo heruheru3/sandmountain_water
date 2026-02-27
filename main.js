@@ -98,10 +98,9 @@ scene.add(gridHelper);
 // --- Interaction Logic (Mountain & Rain) ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let isDrawing = false;
 
 // Brush cursor (blue line circle)
-const cursorGeo = new THREE.RingGeometry(2.3, 2.7, 32);
+const cursorGeo = new THREE.RingGeometry(0.7, 1.3, 48);
 const cursorMat = new THREE.MeshBasicMaterial({
     color: 0x4facfe,
     side: THREE.DoubleSide,
@@ -113,13 +112,24 @@ const cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
 cursorMesh.rotation.x = -Math.PI / 2;
 scene.add(cursorMesh);
 
+let isDrawing = false;
+let isShiftHeld = false;
+window.addEventListener('keydown', (e) => { if (e.key === 'Shift') isShiftHeld = true; });
+window.addEventListener('keyup', (e) => { if (e.key === 'Shift') isShiftHeld = false; });
+
 window.addEventListener('pointerdown', (e) => {
+    // Ignore clicks on UI controls
+    if (e.target.closest('#ui-container')) return;
     if (e.button === 0) isDrawing = true; // Left click
 });
-window.addEventListener('pointerup', () => {
+window.addEventListener('pointerup', (e) => {
+    // Ignore releases on UI controls
+    if (e.target.closest('#ui-container')) return;
     isDrawing = false;
 });
 window.addEventListener('pointermove', (event) => {
+    // Ignore mouse moves over UI controls so sliders can be grabbed
+    if (event.target.closest('#ui-container')) return;
     // Calculate mouse position in normalized device coordinates (-1 to +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -136,7 +146,11 @@ window.addEventListener('pointermove', (event) => {
         cursorMesh.visible = true;
 
         if (isDrawing) {
-            raiseTerrain(intersects[0].point);
+            if (isShiftHeld) {
+                lowerTerrain(intersects[0].point);
+            } else {
+                raiseTerrain(intersects[0].point);
+            }
         }
     } else {
         cursorMesh.visible = false;
@@ -148,7 +162,7 @@ window.addEventListener('pointermove', (event) => {
 
 function raiseTerrain(point) {
     const positions = geometry.attributes.position.array;
-    const radius = 5; // Brush radius
+    const radius = brushRadius; // Brush radius controlled by UI slider
     const strength = 0.2; // Brush strength (reduced for slower building)
 
     let changed = false;
@@ -165,7 +179,7 @@ function raiseTerrain(point) {
 
         if (distance < radius) {
             let idx = i / 3;
-            const maxHeight = 15.0; // Maximum terrain height cap
+            const maxHeight = 100.0; // Maximum terrain height cap
             const currentH = positions[i + 1];
 
             // Use a smooth bell curve (Gaussian-like) for the raise profile
@@ -201,11 +215,49 @@ function raiseTerrain(point) {
     }
 }
 
+function lowerTerrain(point) {
+    const positions = geometry.attributes.position.array;
+    const radius = 5;
+    const strength = 0.3;
+    const bedrockLimit = -1.0; // Cannot dig below bedrock
+
+    let changed = false;
+
+    for (let i = 0; i < positions.length; i += 3) {
+        const vx = positions[i];
+        const vz = positions[i + 2];
+
+        const dx = vx - point.x;
+        const dz = vz - point.z;
+        const distance = Math.sqrt(dx * dx + dz * dz);
+
+        if (distance < radius) {
+            const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), 2);
+            const newH = positions[i + 1] - strength * falloff;
+            positions[i + 1] = Math.max(bedrockLimit, newH);
+            changed = true;
+
+            // Color the dug area as rock
+            const colors = geometry.attributes.color.array;
+            colors[i] = colorRock.r;
+            colors[i + 1] = colorRock.g;
+            colors[i + 2] = colorRock.b;
+        }
+    }
+
+    if (changed) {
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.color.needsUpdate = true;
+        geometry.computeVertexNormals();
+        updateWaterMesh();
+    }
+}
+
 // Prevent spiky terrain by collapsing steep slopes between neighbors
 function slumpTerrain() {
     const positions = geometry.attributes.position.array;
     const maxSlope = 1.4; // Max allowed height diff between adjacent cells
-    const slumpRate = 0.4; // How fast excess collapses (0=none, 1=instant)
+    const slumpRate = 0.5; // How fast excess collapses (0=none, 1=instant)
 
     for (let z = 1; z < segments; z++) {
         for (let x = 1; x < segments; x++) {
@@ -285,6 +337,78 @@ class WaterParticle {
     }
 }
 
+// --- Rain Settings (controlled by UI sliders) ---
+let rainRadius = 1;
+let rainCount = 1;
+
+// --- Mountain Brush Settings (controlled by UI slider) ---
+let brushRadius = 15;
+
+// Connect sliders
+const rainRadiusSlider = document.getElementById('rainRadius');
+const rainAmountSlider = document.getElementById('rainAmount');
+const mountainRadiusSlider = document.getElementById('mountainRadius');
+
+const rainRadiusVal = document.getElementById('rainRadiusVal');
+const rainAmountVal = document.getElementById('rainAmountVal');
+const mountainRadiusVal = document.getElementById('mountainRadiusVal');
+const resetBtn = document.getElementById('resetBtn');
+
+if (rainRadiusSlider) {
+    rainRadiusSlider.addEventListener('input', () => {
+        rainRadius = parseFloat(rainRadiusSlider.value);
+        rainRadiusVal.textContent = rainRadius;
+        // Resize the cursor ring to match the new radius
+        cursorMesh.geometry.dispose();
+        cursorMesh.geometry = new THREE.RingGeometry(rainRadius - 0.3, rainRadius + 0.3, 48);
+    });
+}
+
+if (rainAmountSlider) {
+    rainAmountSlider.addEventListener('input', () => {
+        rainCount = parseInt(rainAmountSlider.value);
+        rainAmountVal.textContent = rainCount;
+    });
+}
+
+if (mountainRadiusSlider) {
+    mountainRadiusSlider.addEventListener('input', () => {
+        brushRadius = parseFloat(mountainRadiusSlider.value);
+        mountainRadiusVal.textContent = brushRadius;
+    });
+}
+
+if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+        resetSimulation();
+    });
+}
+
+function resetSimulation() {
+    const positions = geometry.attributes.position.array;
+    const colors = geometry.attributes.color.array;
+
+    for (let i = 0; i < positions.length; i += 3) {
+        positions[i + 1] = 0; // Reset height to 0
+        colors[i] = colorGrass.r;
+        colors[i + 1] = colorGrass.g;
+        colors[i + 2] = colorGrass.b;
+    }
+
+    for (let i = 0; i < waterDepths.length; i++) {
+        waterDepths[i] = 0;
+        nextWaterDepths[i] = 0;
+        hardness[i] = 1.0;
+        sediment[i] = 0;
+        nextSediment[i] = 0;
+    }
+
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+    geometry.computeVertexNormals();
+    updateWaterMesh();
+}
+
 function spawnRain() {
     // Make sure we have a valid mouse coordinate
     raycaster.setFromCamera(mouse, camera);
@@ -293,10 +417,10 @@ function spawnRain() {
     if (intersects.length > 0) {
         const point = intersects[0].point;
 
-        // Add water in a small radius around the mouse pointer
-        for (let i = 0; i < 20; i++) {
-            let rx = point.x + (Math.random() - 0.5) * 5;
-            let rz = point.z + (Math.random() - 0.5) * 5;
+        // Add water in a radius around the mouse pointer (driven by slider)
+        for (let i = 0; i < rainCount; i++) {
+            let rx = point.x + (Math.random() - 0.5) * rainRadius * 2;
+            let rz = point.z + (Math.random() - 0.5) * rainRadius * 2;
 
             let gridX = Math.round((rx + terrainWidth / 2) / terrainWidth * segments);
             let gridZ = Math.round((rz + terrainDepth / 2) / terrainDepth * segments);

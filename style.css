@@ -21,7 +21,8 @@ canvas {
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
-    pointer-events: none; /* Let clicks pass through to the canvas */
+    pointer-events: auto;
+    /* Allow interacting with sliders */
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -35,4 +36,43 @@ p {
     margin: 5px 0;
     font-size: 0.9rem;
     color: #e2e8f0;
+}
+
+.slider-row {
+    margin-top: 10px;
+}
+
+.slider-row label {
+    display: block;
+    font-size: 0.85rem;
+    color: #b0c4de;
+    margin-bottom: 3px;
+}
+
+.slider-row input[type="range"] {
+    width: 100%;
+    accent-color: #4facfe;
+    cursor: pointer;
+}
+
+#resetBtn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#resetBtn:hover {
+    background: linear-gradient(135deg, #ff4b2b, #ff416c);
+    transform: translateY(-2px);
+}
+
+#resetBtn:active {
+    transform: translateY(0);
 }
