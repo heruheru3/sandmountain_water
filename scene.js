@@ -25,6 +25,7 @@ controls.mouseButtons = {
     MIDDLE: THREE.MOUSE.ROTATE,
     RIGHT: THREE.MOUSE.NONE
 };
+// OrbitControls standard: Shift + RotateButton(MIDDLE) = PAN
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);

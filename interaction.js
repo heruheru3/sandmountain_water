@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as state from './state.js';
 import * as terrainModule from './terrain.js';
-import { camera, scene } from './scene.js';
+import { camera, scene, controls } from './scene.js';
 
 export const raycaster = new THREE.Raycaster();
 export const mouse = new THREE.Vector2();
@@ -34,11 +34,55 @@ export function initInteraction() {
         if (!e.target.closest('#ui-container')) e.preventDefault();
     });
 
+    let lastRightClickTime = 0;
+    const doubleClickThreshold = 300;
+
     window.addEventListener('pointerdown', (e) => {
         if (e.target.closest('#ui-container')) return;
         if (e.button === 0) state.setDrawing(true);
-        if (e.button === 2) state.setRightClicking(true);
+        if (e.button === 2) {
+            if (state.isShiftHeld) {
+                // Shift + Right is handled by OrbitControls for Pan
+            } else {
+                const now = Date.now();
+                if (now - lastRightClickTime < doubleClickThreshold) {
+                    // Right Double Click detected
+                    handleRightDoubleClick(e);
+                    lastRightClickTime = 0; // Reset after double click
+                    state.setRightClicking(false); // Cancel the hold-rain for double clicks
+                } else {
+                    state.setRightClicking(true);
+                    lastRightClickTime = now;
+                }
+            }
+        }
     });
+
+    function handleRightDoubleClick(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        // Check if we clicked on an existing marker
+        const markers = state.waterSources.map(s => s.marker).filter(m => m);
+        const markerIntersects = raycaster.intersectObjects(markers);
+        if (markerIntersects.length > 0) {
+            const hitMarker = markerIntersects[0].object;
+            const source = state.waterSources.find(s => s.marker === hitMarker);
+            if (source) {
+                state.removeWaterSource(source.id);
+                return;
+            }
+        }
+
+        // Check if we clicked on terrain
+        const intersects = raycaster.intersectObject(terrainModule.terrain);
+        if (intersects.length > 0) {
+            const p = intersects[0].point;
+            const marker = terrainModule.createSourceMarker(p);
+            state.addWaterSource(p.x, p.z, marker);
+        }
+    }
 
     window.addEventListener('pointerup', (e) => {
         if (e.target.closest('#ui-container')) return;
@@ -89,7 +133,6 @@ export function initInteraction() {
     if (rainRadiusSlider) {
         rainRadiusSlider.value = state.rainRadius;
         rainRadiusVal.textContent = state.rainRadius;
-        // Also update cursor to match initial rain radius
         cursorMesh.geometry.dispose();
         cursorMesh.geometry = new THREE.RingGeometry(state.rainRadius - 0.3, state.rainRadius + 0.3, 48);
     }
@@ -170,6 +213,7 @@ export function initInteraction() {
 
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
+            state.clearWaterSources();
             terrainModule.initTerrain();
             terrainModule.updateWaterMesh();
         });

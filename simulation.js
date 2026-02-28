@@ -39,6 +39,17 @@ export function spawnGlobalRain() {
     }
 }
 
+export function spawnSourceWater() {
+    state.waterSources.forEach(source => {
+        let gridX = Math.round((source.x + terrainWidth / 2) / terrainWidth * segments);
+        let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
+        if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
+            let idx = gridZ * (segments + 1) + gridX;
+            terrainModule.waterDepths[idx] += 0.5; // 水源なので少し多めに
+        }
+    });
+}
+
 export function updateSimulation(mouse) {
     if (state.checkRain()) {
         spawnRain(mouse);
@@ -46,6 +57,7 @@ export function updateSimulation(mouse) {
     if (state.isGlobalRaining) {
         spawnGlobalRain();
     }
+    spawnSourceWater();
 
     const positions = terrainModule.geometry.attributes.position.array;
     const colors = terrainModule.geometry.attributes.color.array;

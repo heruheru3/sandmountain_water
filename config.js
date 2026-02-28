@@ -14,7 +14,7 @@ export const colorBorder = new THREE.Color(0x1a1a2e); // マップ端の境界�
 export const colorWater = 0x3a86ff;                  // 水の色
 
 // --- 地形変形の制限 ---
-export const domeHeight = 2.0;    // 初期の丘の高さ
+export const domeHeight = 10.0;    // 初期の丘の高さ
 export const maxHeight = 1000;    // 山の最大高度
 export const bedrockLimit = 1; // 地盤の最低高度（これ以上掘れない）
 
@@ -22,7 +22,7 @@ export const bedrockLimit = 1; // 地盤の最低高度（これ以上掘れな�
 export const maxSlope = 2.5;             // 砂が崩れ始める最大傾斜
 export const slumpRate = 0.8;            // 砂が崩れる際の速度 (0〜1)
 export const evaporation = 0.0002;       // フレームごとの水の蒸発量 (微量に設定)
-export const sedimentCapacityFactor = 2.0; // 水が運べる土砂の容量係数 (下げて安定化)
+export const sedimentCapacityFactor = 4.0; // 水が運べる土砂の容量係数 (下げて安定化)
 export const erosionRate = 0.4;          // 地形が削れる速度
 export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度

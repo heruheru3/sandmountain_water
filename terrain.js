@@ -190,6 +190,7 @@ export function lowerTerrain(point) {
             const newH = positions[i + 1] - strength * falloff;
             positions[i + 1] = Math.max(bedrockLimit, newH);
             const colors = geometry.attributes.color.array;
+            let idx = i / 3;
             const xIdx = idx % (segments + 1);
             const zIdx = Math.floor(idx / (segments + 1));
             // 境界の色は変えない
@@ -230,4 +231,19 @@ export function generateRandomTerrain() {
         state.setBrushRadius(originalRadius);
         state.setBuildStrength(originalStrength);
     }
+}
+export function createSourceMarker(point) {
+    const geo = new THREE.SphereGeometry(0.8, 16, 16);
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x00ffff,
+        emissive: 0x0088ff,
+        emissiveIntensity: 2,
+        transparent: true,
+        opacity: 0.7
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(point);
+    mesh.position.y += 1.0;
+    scene.add(mesh);
+    return mesh;
 }
