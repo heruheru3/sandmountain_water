@@ -1,10 +1,11 @@
-import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing } from './config.js';
+import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor } from './config.js';
 
 export let brushRadius = defaultBrushRadius;
 export let buildStrength = defaultBuildStrength;
 export let rainRadius = defaultRainRadius;
 export let rainCount = defaultRainCount;
 export let useSmoothing = defaultSmoothing;
+export let maxFlowFactor = defaultMaxFlowFactor;
 
 export let isDrawing = false;
 export let isRightClicking = false;
@@ -23,6 +24,7 @@ export function setShiftHeld(val) { isShiftHeld = val; }
 export function setRaining(val) { isRaining = val; }
 export function setGlobalRaining(val) { isGlobalRaining = val; }
 export function setUseSmoothing(val) { useSmoothing = val; }
+export function setMaxFlowFactor(val) { maxFlowFactor = val; }
 
 export let waterSources = []; // [{id, x, z, marker}]
 

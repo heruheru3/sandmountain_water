@@ -130,6 +130,9 @@ export function initInteraction() {
     const rainAmountSlider = document.getElementById('rainAmount');
     const mountainRadiusSlider = document.getElementById('mountainRadius');
     const buildStrengthSlider = document.getElementById('buildStrength');
+    const buildStrengthVal = document.getElementById('buildStrengthVal');
+    const maxFlowSlider = document.getElementById('maxFlowFactor');
+    const maxFlowVal = document.getElementById('maxFlowVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -137,7 +140,6 @@ export function initInteraction() {
     const rainRadiusVal = document.getElementById('rainRadiusVal');
     const rainAmountVal = document.getElementById('rainAmountVal');
     const mountainRadiusVal = document.getElementById('mountainRadiusVal');
-    const buildStrengthVal = document.getElementById('buildStrengthVal');
 
     // Initialize UI with state values
     if (rainRadiusSlider) {
@@ -157,6 +159,10 @@ export function initInteraction() {
     if (buildStrengthSlider) {
         buildStrengthSlider.value = state.buildStrength;
         buildStrengthVal.textContent = state.buildStrength;
+    }
+    if (maxFlowSlider) {
+        maxFlowSlider.value = state.maxFlowFactor;
+        maxFlowVal.textContent = state.maxFlowFactor;
     }
     if (smoothShadingToggle) {
         smoothShadingToggle.checked = state.useSmoothing;
@@ -189,6 +195,13 @@ export function initInteraction() {
         buildStrengthSlider.addEventListener('input', () => {
             state.setBuildStrength(parseFloat(buildStrengthSlider.value));
             buildStrengthVal.textContent = state.buildStrength;
+        });
+    }
+
+    if (maxFlowSlider) {
+        maxFlowSlider.addEventListener('input', () => {
+            state.setMaxFlowFactor(parseFloat(maxFlowSlider.value));
+            maxFlowVal.textContent = state.maxFlowFactor;
         });
     }
 

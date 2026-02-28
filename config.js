@@ -26,7 +26,7 @@ export const sedimentCapacityFactor = 4.0; // 水が運べる土砂の容量係�
 export const erosionRate = 0.4;          // 地形が削れる速度
 export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度
-export const maxFlowFactor = 0.1;       // 水の流動性係数（高いほど速く流れる）
+export const defaultMaxFlowFactor = 0.1; // 水の流動性係数（高いほど速く流れる）
 
 // --- スライダーの初期値 ---
 export const defaultRainRadius = 1;      // 雨の範囲の初期値

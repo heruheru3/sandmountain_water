@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, evaporation, sedimentCapacityFactor, erosionRate, erosionMax, depositionRate, maxFlowFactor, bedrockLimit, rainDropAmount, globalRainDropAmount, globalRainDensity } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, evaporation, sedimentCapacityFactor, erosionRate, erosionMax, depositionRate, bedrockLimit, rainDropAmount, globalRainDropAmount, globalRainDensity } from './config.js';
 import * as state from './state.js';
 import * as terrainModule from './terrain.js';
 import { camera, scene } from './scene.js';
@@ -118,7 +118,7 @@ export function updateSimulation(mouse) {
                 }
             }
             if (totalDh > 0) {
-                let maxFlow = d * maxFlowFactor;
+                let maxFlow = d * state.maxFlowFactor;
                 for (let i = 0; i < 4; i++) {
                     if (dhs[i] > 0) {
                         let flow = (dhs[i] / totalDh) * maxFlow;
