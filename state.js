@@ -22,6 +22,7 @@ export function setRightClicking(val) { isRightClicking = val; }
 export function setShiftHeld(val) { isShiftHeld = val; }
 export function setRaining(val) { isRaining = val; }
 export function setGlobalRaining(val) { isGlobalRaining = val; }
+export function setUseSmoothing(val) { useSmoothing = val; }
 
 export function checkRain() {
     return isRaining || isRightClicking;

@@ -141,7 +141,7 @@ export function initInteraction() {
 
     if (smoothShadingToggle) {
         smoothShadingToggle.addEventListener('change', () => {
-            state.useSmoothing = smoothShadingToggle.checked;
+            state.setUseSmoothing(smoothShadingToggle.checked);
             terrainModule.material.flatShading = !state.useSmoothing;
             terrainModule.material.needsUpdate = true;
         });
