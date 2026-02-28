@@ -233,17 +233,37 @@ export function generateRandomTerrain() {
     }
 }
 export function createSourceMarker(point) {
-    const geo = new THREE.SphereGeometry(0.8, 16, 16);
-    const mat = new THREE.MeshStandardMaterial({
+    const group = new THREE.Group();
+
+    // Sphere Marker
+    const sphereGeo = new THREE.SphereGeometry(0.8, 16, 16);
+    const sphereMat = new THREE.MeshStandardMaterial({
         color: 0x00ffff,
         emissive: 0x0088ff,
         emissiveIntensity: 2,
         transparent: true,
         opacity: 0.7
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(point);
-    mesh.position.y += 1.0;
-    scene.add(mesh);
-    return mesh;
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.position.set(0, 1.0, 0);
+    group.add(sphere);
+
+    // Water Stream (Cylinder)
+    const streamHeight = point.y + 1.0;
+    const streamGeo = new THREE.CylinderGeometry(0.2, 0.4, streamHeight, 8);
+    const streamMat = new THREE.MeshStandardMaterial({
+        color: 0x3a86ff,
+        transparent: true,
+        opacity: 0.5,
+        emissive: 0x3a86ff,
+        emissiveIntensity: 0.5
+    });
+    const stream = new THREE.Mesh(streamGeo, streamMat);
+    // Align cylinder to reach from sphere (y=1.0) down to global y=0
+    stream.position.set(0, 1.0 - (streamHeight / 2), 0);
+    group.add(stream);
+
+    group.position.copy(point);
+    scene.add(group);
+    return group;
 }

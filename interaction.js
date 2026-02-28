@@ -64,11 +64,12 @@ export function initInteraction() {
         raycaster.setFromCamera(mouse, camera);
 
         // Check if we clicked on an existing marker
-        const markers = state.waterSources.map(s => s.marker).filter(m => m);
-        const markerIntersects = raycaster.intersectObjects(markers);
+        const markerGroups = state.waterSources.map(s => s.marker).filter(m => m);
+        const markerIntersects = raycaster.intersectObjects(markerGroups, true); // Recursive check
         if (markerIntersects.length > 0) {
-            const hitMarker = markerIntersects[0].object;
-            const source = state.waterSources.find(s => s.marker === hitMarker);
+            let hitObject = markerIntersects[0].object;
+            // Find which group this hit object belongs to
+            const source = state.waterSources.find(s => s.marker === hitObject.parent || s.marker === hitObject);
             if (source) {
                 state.removeWaterSource(source.id);
                 return;

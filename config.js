@@ -9,7 +9,7 @@ export const showGrid = true;     // グリッドヘルパーを表示するか
 // --- 色の設定 ---
 export const colorGrass = new THREE.Color(0x3a5f0b); // 基本の地面（草地）
 export const colorSand = new THREE.Color(0xdeb887);  // 砂の色
-export const colorRock = new THREE.Color(0xa69b8d);  // 侵食された岩の色
+export const colorRock = new THREE.Color(0xbe9867);  // 削られた砂の色（少し暗いトーン）
 export const colorBorder = new THREE.Color(0x1a1a2e); // マップ端の境界線（濃い色）
 export const colorWater = 0x3a86ff;                  // 水の色
 
