@@ -5,6 +5,13 @@ import * as terrainModule from './terrain.js';
 import { camera, scene } from './scene.js';
 
 const raycaster = new THREE.Raycaster();
+const nextWaterColors = new Float32Array((segments + 1) * (segments + 1) * 3);
+
+function setWaterColorAt(idx, color) {
+    terrainModule.waterColors[idx * 3] = color.r;
+    terrainModule.waterColors[idx * 3 + 1] = color.g;
+    terrainModule.waterColors[idx * 3 + 2] = color.b;
+}
 
 export function spawnRain(mouse) {
     raycaster.setFromCamera(mouse, camera);
@@ -19,6 +26,10 @@ export function spawnRain(mouse) {
             if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
                 let idx = gridZ * (segments + 1) + gridX;
                 terrainModule.waterDepths[idx] += rainDropAmount;
+                // Rain is slightly brighter/lighter blue
+                terrainModule.waterColors[idx * 3] += 0.05 * Math.random();
+                terrainModule.waterColors[idx * 3 + 1] += 0.05 * Math.random();
+                terrainModule.waterColors[idx * 3 + 2] += 0.1 * Math.random();
             }
         }
     }
@@ -34,17 +45,29 @@ export function spawnGlobalRain() {
         if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
             let idx = gridZ * (segments + 1) + gridX;
             terrainModule.waterDepths[idx] += globalRainDropAmount;
+            // Subtle shift for global rain
+            terrainModule.waterColors[idx * 3] = 0.2 + Math.random() * 0.1;
+            terrainModule.waterColors[idx * 3 + 1] = 0.5 + Math.random() * 0.1;
+            terrainModule.waterColors[idx * 3 + 2] = 1.0;
         }
     }
 }
 
 export function spawnSourceWater() {
-    state.waterSources.forEach(source => {
+    state.waterSources.forEach((source, sIdx) => {
         let gridX = Math.round((source.x + terrainWidth / 2) / terrainWidth * segments);
         let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
         if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
             let idx = gridZ * (segments + 1) + gridX;
-            terrainModule.waterDepths[idx] += 0.5; // 元のシンプルな追加形式
+            terrainModule.waterDepths[idx] += 0.5;
+
+            // Generate a unique color for each source based on its ID/index
+            // We shift hue slightly for each source
+            const tint = new THREE.Color().setHSL((sIdx * 0.13) % 1.0, 0.7, 0.6);
+            // Blend existing color with this source tint
+            terrainModule.waterColors[idx * 3] = tint.r;
+            terrainModule.waterColors[idx * 3 + 1] = tint.g;
+            terrainModule.waterColors[idx * 3 + 2] = tint.b;
         }
     });
 }
@@ -65,6 +88,10 @@ export function updateSimulation(mouse) {
     for (let i = 0; i < terrainModule.waterDepths.length; i++) {
         terrainModule.nextWaterDepths[i] = terrainModule.waterDepths[i];
         terrainModule.nextSediment[i] = terrainModule.sediment[i];
+        // Initialize color buffer for next frame
+        nextWaterColors[i * 3] = terrainModule.waterColors[i * 3];
+        nextWaterColors[i * 3 + 1] = terrainModule.waterColors[i * 3 + 1];
+        nextWaterColors[i * 3 + 2] = terrainModule.waterColors[i * 3 + 2];
     }
 
     const flux = new Float32Array(terrainModule.waterDepths.length * 4);
@@ -96,6 +123,18 @@ export function updateSimulation(mouse) {
                         let nIdx = idx + offsets[i];
                         terrainModule.nextWaterDepths[idx] -= flow;
                         terrainModule.nextWaterDepths[nIdx] += flow;
+
+                        // TRANSPORT COLOR: The target cell's color becomes a weighted average of its current color
+                        // and the incoming water's color.
+                        let currentColorAmt = terrainModule.waterDepths[nIdx];
+                        let totalNewWater = currentColorAmt + flow;
+                        if (totalNewWater > 0.001) {
+                            let fRatio = flow / totalNewWater;
+                            nextWaterColors[nIdx * 3] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3], terrainModule.waterColors[idx * 3], fRatio);
+                            nextWaterColors[nIdx * 3 + 1] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3 + 1], terrainModule.waterColors[idx * 3 + 1], fRatio);
+                            nextWaterColors[nIdx * 3 + 2] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3 + 2], terrainModule.waterColors[idx * 3 + 2], fRatio);
+                        }
+
                         if (terrainModule.sediment[idx] > 0) {
                             let sedimentFlow = (flow / d) * terrainModule.sediment[idx];
                             terrainModule.nextSediment[idx] -= sedimentFlow;
@@ -193,10 +232,18 @@ export function updateSimulation(mouse) {
         } else {
             terrainModule.waterDepths[i] = Math.max(0, terrainModule.nextWaterDepths[i] - evaporation);
             terrainModule.sediment[i] = Math.max(0, terrainModule.nextSediment[i]);
+
+            // Sync colors
+            terrainModule.waterColors[i * 3] = nextWaterColors[i * 3];
+            terrainModule.waterColors[i * 3 + 1] = nextWaterColors[i * 3 + 1];
+            terrainModule.waterColors[i * 3 + 2] = nextWaterColors[i * 3 + 2];
         }
     }
 
     terrainModule.updateWaterMesh();
+    // Inform GPU that water colors have updated
+    terrainModule.waterPlane.geometry.attributes.color.needsUpdate = true;
+
     if (geometryNeedsUpdate) {
         terrainModule.slumpTerrain();
         terrainModule.geometry.attributes.position.needsUpdate = true;

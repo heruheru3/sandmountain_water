@@ -21,6 +21,7 @@ scene.add(terrain);
 
 export const waterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const nextWaterDepths = new Float32Array((segments + 1) * (segments + 1));
+export const waterColors = new Float32Array((segments + 1) * (segments + 1) * 3); // RGB for each vertex
 export const hardness = new Float32Array((segments + 1) * (segments + 1));
 export const sediment = new Float32Array((segments + 1) * (segments + 1));
 export const nextSediment = new Float32Array((segments + 1) * (segments + 1));
@@ -29,17 +30,26 @@ export const nextSediment = new Float32Array((segments + 1) * (segments + 1));
 export const waterPlaneGeo = new THREE.PlaneGeometry(terrainWidth, terrainDepth, segments, segments);
 waterPlaneGeo.rotateX(-Math.PI / 2);
 export const waterPlaneMat = new THREE.MeshStandardMaterial({
-    color: 0x3a86ff,
+    vertexColors: true, // Use vertex colors
     transparent: true,
-    opacity: 0.6,
-    roughness: 0.2,
-    metalness: 0.1,
+    opacity: 0.7,
+    roughness: 0.1,
+    metalness: 0.2,
     flatShading: false,
     depthWrite: false,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1
 });
+// Initialize water colors with a base blue
+const baseWaterColor = new THREE.Color(0x3a86ff);
+for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
+    waterColors[i * 3] = baseWaterColor.r;
+    waterColors[i * 3 + 1] = baseWaterColor.g;
+    waterColors[i * 3 + 2] = baseWaterColor.b;
+}
+waterPlaneGeo.setAttribute('color', new THREE.BufferAttribute(waterColors, 3));
+
 export const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
 scene.add(waterPlane);
 
