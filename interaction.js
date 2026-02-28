@@ -116,6 +116,15 @@ export function initInteraction() {
         }
     });
 
+    const uiToggle = document.getElementById('ui-toggle');
+    const uiContainer = document.getElementById('ui-container');
+    if (uiToggle && uiContainer) {
+        uiToggle.addEventListener('click', () => {
+            uiContainer.classList.toggle('collapsed');
+            uiToggle.textContent = uiContainer.classList.contains('collapsed') ? '➕' : '☰';
+        });
+    }
+
     // UI Listeners
     const rainRadiusSlider = document.getElementById('rainRadius');
     const rainAmountSlider = document.getElementById('rainAmount');

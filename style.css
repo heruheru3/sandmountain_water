@@ -17,13 +17,68 @@ canvas {
     top: 20px;
     left: 20px;
     background: rgba(15, 15, 25, 0.8);
-    padding: 20px;
+    padding: 15px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     pointer-events: auto;
-    /* Allow interacting with sliders */
     border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 280px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+}
+
+#ui-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#ui-toggle {
+    background: none;
+    border: none;
+    color: #4facfe;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+    transition: transform 0.3s;
+}
+
+#ui-container.collapsed #ui-toggle {
+    transform: rotate(90deg);
+}
+
+#ui-content {
+    margin-top: 15px;
+    transition: opacity 0.3s, max-height 0.3s;
+    overflow: hidden;
+    max-height: 1000px;
+    opacity: 1;
+}
+
+#ui-container.collapsed #ui-content {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+}
+
+#ui-container.collapsed {
+    width: 140px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    #ui-container {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+
+    #ui-container.collapsed {
+        width: calc(100% - 20px);
+    }
 }
 
 h1 {

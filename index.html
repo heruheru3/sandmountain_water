@@ -10,37 +10,42 @@
 
 <body>
     <div id="ui-container">
-        <h1>Sand Mountain Erosion</h1>
-        <p>🖱️ <strong>Left Drag</strong>: Build mountain</p>
-        <p>⇧ <strong>Shift+Drag</strong>: Dig hole</p>
-        <p>🔵 <strong>Middle Drag</strong>: Rotate camera</p>
-        <p>💧 <strong>Hold R</strong>: Make it rain</p>
-        <div class="slider-row">
-            <label for="rainRadius">Rain Radius: <span id="rainRadiusVal">1</span></label>
-            <input type="range" id="rainRadius" min="1" max="20" value="1" step="0.5">
+        <div id="ui-header">
+            <h1>Sand Mountain</h1>
+            <button id="ui-toggle">☰</button>
         </div>
-        <div class="slider-row">
-            <label for="rainAmount">Rain Amount: <span id="rainAmountVal">1</span></label>
-            <input type="range" id="rainAmount" min="1" max="60" value="1" step="1">
-        </div>
-        <div class="slider-row">
-            <label for="mountainRadius">Mountain Radius: <span id="mountainRadiusVal">15</span></label>
-            <input type="range" id="mountainRadius" min="1" max="20" value="15" step="0.5">
-        </div>
-        <div class="slider-row">
-            <label for="buildStrength">Build Strength: <span id="buildStrengthVal">0.15</span></label>
-            <input type="range" id="buildStrength" min="0.01" max="0.5" value="0.15" step="0.01">
-        </div>
-        <div class="checkbox-row">
-            <input type="checkbox" id="smoothShading" checked>
-            <label for="smoothShading">Smooth Shading</label>
-        </div>
-        <div class="button-row">
-            <button id="globalRainBtn">Global Rain: OFF</button>
-            <button id="randomBtn">Add Random Hills</button>
-        </div>
-        <div class="button-row">
-            <button id="resetBtn">Reset All</button>
+        <div id="ui-content">
+            <p>🖱️ <strong>Left Drag</strong>: Build mountain</p>
+            <p>⇧ <strong>Shift+Drag</strong>: Dig hole</p>
+            <p>🔵 <strong>Middle Drag</strong>: Rotate camera</p>
+            <p>💧 <strong>Hold R</strong>: Make it rain</p>
+            <div class="slider-row">
+                <label for="rainRadius">Rain Radius: <span id="rainRadiusVal">1</span></label>
+                <input type="range" id="rainRadius" min="1" max="20" value="1" step="0.5">
+            </div>
+            <div class="slider-row">
+                <label for="rainAmount">Rain Amount: <span id="rainAmountVal">1</span></label>
+                <input type="range" id="rainAmount" min="1" max="60" value="1" step="1">
+            </div>
+            <div class="slider-row">
+                <label for="mountainRadius">Mountain Radius: <span id="mountainRadiusVal">15</span></label>
+                <input type="range" id="mountainRadius" min="1" max="20" value="15" step="0.5">
+            </div>
+            <div class="slider-row">
+                <label for="buildStrength">Build Strength: <span id="buildStrengthVal">0.15</span></label>
+                <input type="range" id="buildStrength" min="0.01" max="0.5" value="0.15" step="0.01">
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="smoothShading" checked>
+                <label for="smoothShading">Smooth Shading</label>
+            </div>
+            <div class="button-row">
+                <button id="globalRainBtn">Global Rain: OFF</button>
+                <button id="randomBtn">Add Random Hills</button>
+            </div>
+            <div class="button-row">
+                <button id="resetBtn">Reset All</button>
+            </div>
         </div>
     </div>
     <script type="importmap">
