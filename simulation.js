@@ -26,10 +26,11 @@ export function spawnRain(mouse) {
             if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
                 let idx = gridZ * (segments + 1) + gridX;
                 terrainModule.waterDepths[idx] += rainDropAmount;
-                // Rain is slightly brighter/lighter blue
-                terrainModule.waterColors[idx * 3] += 0.05 * Math.random();
-                terrainModule.waterColors[idx * 3 + 1] += 0.05 * Math.random();
-                terrainModule.waterColors[idx * 3 + 2] += 0.1 * Math.random();
+                // Rain matches base blue (0x3a86ff) with very subtle sparkle
+                const base = new THREE.Color(0x3a86ff);
+                terrainModule.waterColors[idx * 3] = base.r + 0.05 * Math.random();
+                terrainModule.waterColors[idx * 3 + 1] = base.g + 0.05 * Math.random();
+                terrainModule.waterColors[idx * 3 + 2] = base.b + 0.05 * Math.random();
             }
         }
     }
@@ -45,10 +46,11 @@ export function spawnGlobalRain() {
         if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
             let idx = gridZ * (segments + 1) + gridX;
             terrainModule.waterDepths[idx] += globalRainDropAmount;
-            // Subtle shift for global rain
-            terrainModule.waterColors[idx * 3] = 0.2 + Math.random() * 0.1;
-            terrainModule.waterColors[idx * 3 + 1] = 0.5 + Math.random() * 0.1;
-            terrainModule.waterColors[idx * 3 + 2] = 1.0;
+            // Subtle shift for global rain, but keep it clearly blue
+            const base = new THREE.Color(0x3a86ff);
+            terrainModule.waterColors[idx * 3] = base.r;
+            terrainModule.waterColors[idx * 3 + 1] = base.g;
+            terrainModule.waterColors[idx * 3 + 2] = base.b;
         }
     }
 }
