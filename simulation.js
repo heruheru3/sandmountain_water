@@ -25,7 +25,6 @@ export function spawnRain(mouse) {
 }
 
 export function spawnGlobalRain() {
-    // 画面全体なので、密度を大幅に上げる（全セルに対して一定確率で降るイメージ）
     const dropsPerFrame = segments * globalRainDensity;
     for (let i = 0; i < dropsPerFrame * (state.rainCount / 10); i++) {
         let rx = (Math.random() - 0.5) * terrainWidth;
@@ -34,7 +33,7 @@ export function spawnGlobalRain() {
         let gridZ = Math.round((rz + terrainDepth / 2) / terrainDepth * segments);
         if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
             let idx = gridZ * (segments + 1) + gridX;
-            terrainModule.waterDepths[idx] += globalRainDropAmount; // 1粒あたりの量は少し抑える
+            terrainModule.waterDepths[idx] += globalRainDropAmount;
         }
     }
 }
@@ -45,12 +44,16 @@ export function spawnSourceWater() {
         let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
         if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
             let idx = gridZ * (segments + 1) + gridX;
-            terrainModule.waterDepths[idx] += 0.5; // 水源なので少し多めに
+            terrainModule.waterDepths[idx] += 0.5; // 元のシンプルな追加形式
         }
     });
 }
 
 export function updateSimulation(mouse) {
+    const positions = terrainModule.geometry.attributes.position.array;
+    const colors = terrainModule.geometry.attributes.color.array;
+    let geometryNeedsUpdate = false;
+
     if (state.checkRain()) {
         spawnRain(mouse);
     }
@@ -58,10 +61,6 @@ export function updateSimulation(mouse) {
         spawnGlobalRain();
     }
     spawnSourceWater();
-
-    const positions = terrainModule.geometry.attributes.position.array;
-    const colors = terrainModule.geometry.attributes.color.array;
-    let geometryNeedsUpdate = false;
 
     for (let i = 0; i < terrainModule.waterDepths.length; i++) {
         terrainModule.nextWaterDepths[i] = terrainModule.waterDepths[i];
@@ -139,7 +138,6 @@ export function updateSimulation(mouse) {
                                     positions[nIdx * 3 + 1] -= actualErode;
                                     if (dzInner === 0 && dxInner === 0) terrainModule.nextSediment[idx] += amountToErode;
 
-                                    // 境界線（外周1マス）の色は変更しない
                                     let nxIdx = nIdx % (segments + 1);
                                     let nzIdx = Math.floor(nIdx / (segments + 1));
                                     if (nxIdx > 0 && nxIdx < segments && nzIdx > 0 && nzIdx < segments) {
@@ -165,7 +163,6 @@ export function updateSimulation(mouse) {
                             positions[nIdx * 3 + 1] += actualDeposit;
                             if (dzInner === 0 && dxInner === 0) terrainModule.nextSediment[idx] -= amountToDeposit;
 
-                            // 境界線（外周1マス）の色は変更しない
                             let nxIdx = nIdx % (segments + 1);
                             let nzIdx = Math.floor(nIdx / (segments + 1));
                             if (nxIdx > 0 && nxIdx < segments && nzIdx > 0 && nzIdx < segments) {
@@ -190,12 +187,10 @@ export function updateSimulation(mouse) {
     for (let i = 0; i < terrainModule.waterDepths.length; i++) {
         const z = Math.floor(i / (segments + 1));
         const x = i % (segments + 1);
-        // マップの端（外周1ピクセル）を排水ゾーン（Sink）にする
         if (z === 0 || z === segments || x === 0 || x === segments) {
             terrainModule.waterDepths[i] = 0;
             terrainModule.sediment[i] = 0;
         } else {
-            // evaporationはconfigで0になっているため、実質的に減衰なし
             terrainModule.waterDepths[i] = Math.max(0, terrainModule.nextWaterDepths[i] - evaporation);
             terrainModule.sediment[i] = Math.max(0, terrainModule.nextSediment[i]);
         }

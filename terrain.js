@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, maxSlope, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, maxSlope, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -245,11 +245,11 @@ export function createSourceMarker(point) {
         opacity: 0.7
     });
     const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-    sphere.position.set(0, 1.0, 0);
+    sphere.position.set(0, sourceMarkerHeight, 0);
     group.add(sphere);
 
     // Water Stream (Cylinder)
-    const streamHeight = point.y + 1.0;
+    const streamHeight = point.y + sourceMarkerHeight;
     const streamGeo = new THREE.CylinderGeometry(0.2, 0.4, streamHeight, 8);
     const streamMat = new THREE.MeshStandardMaterial({
         color: 0x3a86ff,
@@ -259,8 +259,8 @@ export function createSourceMarker(point) {
         emissiveIntensity: 0.5
     });
     const stream = new THREE.Mesh(streamGeo, streamMat);
-    // Align cylinder to reach from sphere (y=1.0) down to global y=0
-    stream.position.set(0, 1.0 - (streamHeight / 2), 0);
+    // Align cylinder to reach from sphere down to global y=0
+    stream.position.set(0, sourceMarkerHeight - (streamHeight / 2), 0);
     group.add(stream);
 
     group.position.copy(point);

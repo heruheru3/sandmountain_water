@@ -26,7 +26,7 @@ export const sedimentCapacityFactor = 4.0; // 水が運べる土砂の容量係�
 export const erosionRate = 0.4;          // 地形が削れる速度
 export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度
-export const maxFlowFactor = 0.3;       // 水の流動性係数（高いほど速く流れる）
+export const maxFlowFactor = 0.1;       // 水の流動性係数（高いほど速く流れる）
 
 // --- スライダーの初期値 ---
 export const defaultRainRadius = 1;      // 雨の範囲の初期値
@@ -47,3 +47,5 @@ export const randomHillStrengthMax = 40; // 前より高く (0.3 -> 0.8)
 export const rainDropAmount = 0.2;        // マウス位置の1滴あたりの水量
 export const globalRainDropAmount = 0.03;  // 全体雨の1滴あたりの水量
 export const globalRainDensity = 1.0;     // 全体雨の密度係数
+// --- 水源（湧水点）の設定 ---
+export const sourceMarkerHeight = 10.0;  // 地面からアイコンまでの高さ
