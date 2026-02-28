@@ -23,8 +23,8 @@ export const maxSlope = 2.5;             // 砂が崩れ始める最大傾斜
 export const slumpRate = 0.8;            // 砂が崩れる際の速度 (0〜1)
 export const evaporation = 0.0002;       // フレームごとの水の蒸発量 (微量に設定)
 export const sedimentCapacityFactor = 2.0; // 水が運べる土砂の容量係数 (下げて安定化)
-export const erosionRate = 0.2;          // 地形が削れる速度
-export const erosionMax = 0.1;           // 1フレームで削れる最大深さ
+export const erosionRate = 0.4;          // 地形が削れる速度
+export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度
 export const maxFlowFactor = 0.3;       // 水の流動性係数（高いほど速く流れる）
 
