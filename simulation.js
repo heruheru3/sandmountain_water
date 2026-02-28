@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, evaporation, sedimentCapacityFactor, erosionRate, erosionMax, depositionRate, maxFlowFactor, bedrockLimit } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, evaporation, sedimentCapacityFactor, erosionRate, erosionMax, depositionRate, maxFlowFactor, bedrockLimit, rainDropAmount, globalRainDropAmount, globalRainDensity } from './config.js';
 import * as state from './state.js';
 import * as terrainModule from './terrain.js';
 import { camera, scene } from './scene.js';
@@ -18,8 +18,23 @@ export function spawnRain(mouse) {
             let gridZ = Math.round((rz + terrainDepth / 2) / terrainDepth * segments);
             if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
                 let idx = gridZ * (segments + 1) + gridX;
-                terrainModule.waterDepths[idx] += 0.2;
+                terrainModule.waterDepths[idx] += rainDropAmount;
             }
+        }
+    }
+}
+
+export function spawnGlobalRain() {
+    // 画面全体なので、密度を大幅に上げる（全セルに対して一定確率で降るイメージ）
+    const dropsPerFrame = segments * globalRainDensity;
+    for (let i = 0; i < dropsPerFrame * (state.rainCount / 10); i++) {
+        let rx = (Math.random() - 0.5) * terrainWidth;
+        let rz = (Math.random() - 0.5) * terrainDepth;
+        let gridX = Math.round((rx + terrainWidth / 2) / terrainWidth * segments);
+        let gridZ = Math.round((rz + terrainDepth / 2) / terrainDepth * segments);
+        if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
+            let idx = gridZ * (segments + 1) + gridX;
+            terrainModule.waterDepths[idx] += globalRainDropAmount; // 1粒あたりの量は少し抑える
         }
     }
 }
@@ -27,6 +42,9 @@ export function spawnRain(mouse) {
 export function updateSimulation(mouse) {
     if (state.checkRain()) {
         spawnRain(mouse);
+    }
+    if (state.isGlobalRaining) {
+        spawnGlobalRain();
     }
 
     const positions = terrainModule.geometry.attributes.position.array;

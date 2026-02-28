@@ -71,24 +71,43 @@ p {
     accent-color: #4facfe;
 }
 
-#resetBtn {
-    width: 100%;
+.button-row {
     margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.button-row button {
+    flex: 1;
     padding: 10px;
-    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
     color: white;
     border: none;
     border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
     transition: transform 0.2s, background 0.2s;
+    font-size: 0.85rem;
 }
 
-#resetBtn:hover {
-    background: linear-gradient(135deg, #ff4b2b, #ff416c);
+#resetBtn {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+#globalRainBtn {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+}
+
+#globalRainBtn.active {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
+}
+
+.button-row button:hover {
+    filter: brightness(1.1);
     transform: translateY(-2px);
 }
 
-#resetBtn:active {
+.button-row button:active {
     transform: translateY(0);
 }

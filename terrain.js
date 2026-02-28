@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, maxSlope, slumpRate } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, maxSlope, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -9,7 +9,7 @@ geometry.rotateX(-Math.PI / 2);
 export const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     wireframe: false,
-    flatShading: false,
+    flatShading: !state.useSmoothing,
     roughness: 0.9,
     metalness: 0.0
 });
@@ -35,7 +35,10 @@ export const waterPlaneMat = new THREE.MeshStandardMaterial({
     roughness: 0.2,
     metalness: 0.1,
     flatShading: false,
-    depthWrite: false
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1
 });
 export const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
 scene.add(waterPlane);
@@ -65,6 +68,8 @@ export function initTerrain() {
         sediment[i] = 0;
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
     geometry.computeVertexNormals();
 }
 
@@ -89,11 +94,12 @@ export function updateWaterMesh() {
             }
             avgDepth /= count;
             const depth = waterDepths[idx];
-            if (avgDepth > 0.005 || depth > 0.005) {
+            if (avgDepth > 0.01 || depth > 0.01) {
                 const displayDepth = Math.max(depth, avgDepth * 0.5);
-                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] + displayDepth + 0.02;
+                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] + displayDepth + 0.05;
             } else {
-                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] - 0.1;
+                // 水がない場所は地中に深く沈める（Z-fighting対策）
+                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] - 10.0;
             }
         }
     }
@@ -200,5 +206,28 @@ export function lowerTerrain(point) {
         geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals();
         updateWaterMesh();
+    }
+}
+
+export function generateRandomTerrain() {
+    // 既存の地形を維持したまま、ランダムな場所に山を追加する
+    const numHills = randomHillCountMin + Math.floor(Math.random() * (randomHillCountMax - randomHillCountMin + 1));
+    for (let h = 0; h < numHills; h++) {
+        const randomPoint = {
+            x: (Math.random() - 0.5) * terrainWidth * 0.8,
+            z: (Math.random() - 0.5) * terrainDepth * 0.8
+        };
+        // 保存されている状態を一時的に書き換えて山を作る
+        const originalRadius = state.brushRadius;
+        const originalStrength = state.buildStrength;
+
+        state.setBrushRadius(randomHillRadiusMin + Math.random() * (randomHillRadiusMax - randomHillRadiusMin));
+        state.setBuildStrength(randomHillStrengthMin + Math.random() * (randomHillStrengthMax - randomHillStrengthMin));
+
+        buildMountain(randomPoint);
+
+        // 状態を戻す
+        state.setBrushRadius(originalRadius);
+        state.setBuildStrength(originalStrength);
     }
 }

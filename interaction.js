@@ -77,6 +77,7 @@ export function initInteraction() {
     const mountainRadiusSlider = document.getElementById('mountainRadius');
     const buildStrengthSlider = document.getElementById('buildStrength');
     const smoothShadingToggle = document.getElementById('smoothShading');
+    const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
 
     const rainRadiusVal = document.getElementById('rainRadiusVal');
@@ -103,6 +104,9 @@ export function initInteraction() {
     if (buildStrengthSlider) {
         buildStrengthSlider.value = state.buildStrength;
         buildStrengthVal.textContent = state.buildStrength;
+    }
+    if (smoothShadingToggle) {
+        smoothShadingToggle.checked = state.useSmoothing;
     }
 
     if (rainRadiusSlider) {
@@ -137,8 +141,30 @@ export function initInteraction() {
 
     if (smoothShadingToggle) {
         smoothShadingToggle.addEventListener('change', () => {
-            terrainModule.material.flatShading = !smoothShadingToggle.checked;
+            state.useSmoothing = smoothShadingToggle.checked;
+            terrainModule.material.flatShading = !state.useSmoothing;
             terrainModule.material.needsUpdate = true;
+        });
+    }
+
+    const globalRainBtn = document.getElementById('globalRainBtn');
+    if (globalRainBtn) {
+        globalRainBtn.addEventListener('click', () => {
+            const newState = !state.isGlobalRaining;
+            state.setGlobalRaining(newState);
+            if (newState) {
+                globalRainBtn.classList.add('active');
+                globalRainBtn.textContent = 'Global Rain: ON';
+            } else {
+                globalRainBtn.classList.remove('active');
+                globalRainBtn.textContent = 'Global Rain: OFF';
+            }
+        });
+    }
+
+    if (randomBtn) {
+        randomBtn.addEventListener('click', () => {
+            terrainModule.generateRandomTerrain();
         });
     }
 
