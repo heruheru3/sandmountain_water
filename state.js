@@ -16,21 +16,29 @@ export let isShiftHeld = false;
 export let isRaining = false;
 export let isGlobalRaining = false;
 
-export function setBrushRadius(val) { brushRadius = val; }
-export function setBuildStrength(val) { buildStrength = val; }
-export function setRainRadius(val) { rainRadius = val; }
-export function setRainCount(val) { rainCount = val; }
+// Settings persistence
+export function updateSetting(key, val) {
+    window[key] = val; // Assuming we might want to update local let/var, but better to use specific setters
+    const settings = JSON.parse(localStorage.getItem('sandmountain_settings') || '{}');
+    settings[key] = val;
+    localStorage.setItem('sandmountain_settings', JSON.stringify(settings));
+}
+
+export function setBrushRadius(val) { brushRadius = val; updateSetting('brushRadius', val); }
+export function setBuildStrength(val) { buildStrength = val; updateSetting('buildStrength', val); }
+export function setRainRadius(val) { rainRadius = val; updateSetting('rainRadius', val); }
+export function setRainCount(val) { rainCount = val; updateSetting('rainCount', val); }
+export function setUseSmoothing(val) { useSmoothing = val; updateSetting('useSmoothing', val); }
+export function setMaxFlowFactor(val) { maxFlowFactor = val; updateSetting('maxFlowFactor', val); }
+export function setBrushSharpness(val) { brushSharpness = val; updateSetting('brushSharpness', val); }
+export function setMaxSlope(val) { maxSlope = val; updateSetting('maxSlope', val); }
+export function setWaterOpacity(val) { waterOpacity = val; updateSetting('waterOpacity', val); }
 
 export function setDrawing(val) { isDrawing = val; }
 export function setRightClicking(val) { isRightClicking = val; }
 export function setShiftHeld(val) { isShiftHeld = val; }
 export function setRaining(val) { isRaining = val; }
 export function setGlobalRaining(val) { isGlobalRaining = val; }
-export function setUseSmoothing(val) { useSmoothing = val; }
-export function setMaxFlowFactor(val) { maxFlowFactor = val; }
-export function setBrushSharpness(val) { brushSharpness = val; }
-export function setMaxSlope(val) { maxSlope = val; }
-export function setWaterOpacity(val) { waterOpacity = val; }
 
 import { colorGrass, colorSand, colorRock, colorBorder } from './config.js';
 
@@ -41,18 +49,33 @@ export function updateColor(key, hex) {
     if (key === 'colorRock') colorRock.set(hex);
     if (key === 'colorBorder') colorBorder.set(hex);
 
-    // Persist to localStorage for next session
     const colors = JSON.parse(localStorage.getItem('sandmountain_colors') || '{}');
     colors[key] = hex;
     localStorage.setItem('sandmountain_colors', JSON.stringify(colors));
 }
 
-// Load persisted colors on start
-export function loadSavedColors() {
-    const saved = localStorage.getItem('sandmountain_colors');
-    if (saved) {
-        const colors = JSON.parse(saved);
+// Load persisted data on start
+export function loadSavedSettings() {
+    // Colors
+    const savedColors = localStorage.getItem('sandmountain_colors');
+    if (savedColors) {
+        const colors = JSON.parse(savedColors);
         Object.keys(colors).forEach(key => updateColor(key, colors[key]));
+    }
+
+    // Sliders & Toggles
+    const savedSettings = localStorage.getItem('sandmountain_settings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        if (settings.brushRadius !== undefined) brushRadius = settings.brushRadius;
+        if (settings.buildStrength !== undefined) buildStrength = settings.buildStrength;
+        if (settings.rainRadius !== undefined) rainRadius = settings.rainRadius;
+        if (settings.rainCount !== undefined) rainCount = settings.rainCount;
+        if (settings.useSmoothing !== undefined) useSmoothing = settings.useSmoothing;
+        if (settings.maxFlowFactor !== undefined) maxFlowFactor = settings.maxFlowFactor;
+        if (settings.brushSharpness !== undefined) brushSharpness = settings.brushSharpness;
+        if (settings.maxSlope !== undefined) maxSlope = settings.maxSlope;
+        if (settings.waterOpacity !== undefined) waterOpacity = settings.waterOpacity;
     }
 }
 

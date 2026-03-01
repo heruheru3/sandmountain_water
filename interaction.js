@@ -228,9 +228,14 @@ export function initInteraction() {
         waterOpacitySlider.step = configWaterOpacity.step;
         waterOpacitySlider.value = state.waterOpacity;
         waterOpacityVal.textContent = state.waterOpacity;
+        // Sync material with loaded state
+        terrainModule.waterPlaneMat.opacity = state.waterOpacity;
     }
     if (smoothShadingToggle) {
         smoothShadingToggle.checked = state.useSmoothing;
+        // Sync terrain shading
+        terrainModule.material.flatShading = !state.useSmoothing;
+        terrainModule.material.needsUpdate = true;
     }
 
     if (rainRadiusSlider) {

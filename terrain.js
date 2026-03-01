@@ -23,7 +23,7 @@ scene.add(terrain);
 
 export const waterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const nextWaterDepths = new Float32Array((segments + 1) * (segments + 1));
-export const waterColors = new Float32Array((segments + 1) * (segments + 1) * 3); // RGB for each vertex
+export const waterColors = new Float32Array((segments + 1) * (segments + 1) * 4); // RGBA for each vertex
 export const hardness = new Float32Array((segments + 1) * (segments + 1));
 export const sediment = new Float32Array((segments + 1) * (segments + 1));
 export const nextSediment = new Float32Array((segments + 1) * (segments + 1));
@@ -34,7 +34,7 @@ waterPlaneGeo.rotateX(-Math.PI / 2);
 export const waterPlaneMat = new THREE.MeshStandardMaterial({
     vertexColors: true, // Use vertex colors
     transparent: true,
-    opacity: defaultWaterOpacity,
+    opacity: state.waterOpacity, // Base global opacity
     roughness: defaultWaterRoughness,
     metalness: defaultWaterMetalness,
     flatShading: false,
@@ -43,14 +43,47 @@ export const waterPlaneMat = new THREE.MeshStandardMaterial({
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1
 });
+
+// Support vertex alpha in StandardMaterial
+waterPlaneMat.onBeforeCompile = (shader) => {
+    // Inject attribute and varying declarations at the top
+    shader.vertexShader = `
+        attribute float alpha;
+        varying float vAlpha;
+        ${shader.vertexShader}
+    `.replace(
+        '#include <color_vertex>',
+        `#include <color_vertex>
+        vAlpha = alpha;`
+    );
+
+    shader.fragmentShader = `
+        varying float vAlpha;
+        ${shader.fragmentShader}
+    `.replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        diffuseColor.a *= vAlpha;`
+    );
+};
+
 // Initialize water colors with a base blue
 const baseWaterColor = new THREE.Color(0x3a86ff);
 for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
-    waterColors[i * 3] = baseWaterColor.r;
-    waterColors[i * 3 + 1] = baseWaterColor.g;
-    waterColors[i * 3 + 2] = baseWaterColor.b;
+    waterColors[i * 4] = baseWaterColor.r;
+    waterColors[i * 4 + 1] = baseWaterColor.g;
+    waterColors[i * 4 + 2] = baseWaterColor.b;
+    waterColors[i * 4 + 3] = 1.0; // Full alpha initially
 }
-waterPlaneGeo.setAttribute('color', new THREE.BufferAttribute(waterColors, 3));
+
+// Separate array for display-only alpha (simulation alpha * fade * opacity)
+const displayAlphas = new Float32Array((segments + 1) * (segments + 1));
+for (let i = 0; i < displayAlphas.length; i++) displayAlphas[i] = 0;
+
+// Interleave the state buffer: Color (3) + StateAlpha (1 - not directly used by shader here but kept for state)
+const waterStateBuffer = new THREE.InterleavedBuffer(waterColors, 4);
+waterPlaneGeo.setAttribute('color', new THREE.InterleavedBufferAttribute(waterStateBuffer, 3, 0));
+waterPlaneGeo.setAttribute('alpha', new THREE.BufferAttribute(displayAlphas, 1));
 
 export const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
 scene.add(waterPlane);
@@ -143,22 +176,30 @@ export function initTerrain() {
 export function updateWaterMesh() {
     const tPos = geometry.attributes.position.array;
     const wPos = waterPlaneGeo.attributes.position.array;
-    const colors = waterPlaneGeo.attributes.color.array;
+    const dAlphas = waterPlaneGeo.attributes.alpha.array;
 
     for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
         const depth = waterDepths[i];
-        if (depth > 0.01) {
-            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.05;
-            // Sync colors directly from the live buffer
-            colors[i * 3] = waterColors[i * 3];
-            colors[i * 3 + 1] = waterColors[i * 3 + 1];
-            colors[i * 3 + 2] = waterColors[i * 3 + 2];
+
+        // Fading logic: If depth is less than 0.05, it starts fading.
+        const fadeThreshold = 0.05;
+        const fade = Math.min(1.0, depth / fadeThreshold);
+
+        if (depth > 0.001) {
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.02;
+
+            // Calculate display alpha (Simulated prop * depth-fade)
+            // Global opacity is handled at the Material level (this.opacity)
+            dAlphas[i] = waterColors[i * 4 + 3] * fade;
         } else {
             wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0;
+            dAlphas[i] = 0;
         }
     }
     waterPlaneGeo.attributes.position.needsUpdate = true;
-    waterPlaneGeo.attributes.color.needsUpdate = true;
+    waterPlaneGeo.attributes.alpha.needsUpdate = true;
+    // Tell standard colors to update from the interleaved state buffer
+    waterPlaneGeo.attributes.color.data.needsUpdate = true;
 }
 
 export function slumpTerrain(point = null, radius = null) {
