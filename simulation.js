@@ -183,58 +183,74 @@ export function updateSimulation(mouse) {
                     let amountToErode = Math.min((sedimentCapacity - currentSediment) * erosionRate, erosionMax);
                     let erosionFactor = Math.max(0, 1.0 - terrainModule.hardness[idx]);
                     amountToErode *= erosionFactor;
-                    if (positions[idx * 3 + 1] - amountToErode > bedrockLimit) {
+                    if (amountToErode > 0.005 && positions[idx * 3 + 1] - amountToErode > bedrockLimit) {
                         const weights = [[0.01, 0.04, 0.01], [0.04, 0.60, 0.04], [0.01, 0.04, 0.01]];
                         for (let dzInner = -1; dzInner <= 1; dzInner++) {
                             for (let dxInner = -1; dxInner <= 1; dxInner++) {
                                 let nIdx = (z + dzInner) * (segments + 1) + (x + dxInner);
                                 let weight = weights[dzInner + 1][dxInner + 1];
                                 let actualErode = amountToErode * weight;
-                                if (positions[nIdx * 3 + 1] - actualErode > bedrockLimit) {
+                                if (actualErode > 0.001 && positions[nIdx * 3 + 1] - actualErode > bedrockLimit) {
                                     positions[nIdx * 3 + 1] -= actualErode;
                                     if (dzInner === 0 && dxInner === 0) terrainModule.nextSediment[idx] += amountToErode;
 
                                     let nxIdx = nIdx % (segments + 1);
                                     let nzIdx = Math.floor(nIdx / (segments + 1));
                                     if (nxIdx > 0 && nxIdx < segments && nzIdx > 0 && nzIdx < segments) {
+                                        let oldR = colors[nIdx * 3];
+                                        let oldG = colors[nIdx * 3 + 1];
+                                        let oldB = colors[nIdx * 3 + 2];
                                         colors[nIdx * 3] = Math.max(colorRock.r, colors[nIdx * 3] - 0.005);
                                         colors[nIdx * 3 + 1] = Math.max(colorRock.g, colors[nIdx * 3 + 1] - 0.005);
                                         colors[nIdx * 3 + 2] = Math.max(colorRock.b, colors[nIdx * 3 + 2] - 0.005);
+                                        
+                                        // 変化量が少ないときはフラグを立てない
+                                        if (Math.abs(oldR - colors[nIdx * 3]) > 0.001 || actualErode > 0.005) {
+                                            geometryNeedsUpdate = true;
+                                        }
                                     }
                                 }
                             }
                         }
-                        geometryNeedsUpdate = true;
                     }
                 } else if (currentSediment > sedimentCapacity) {
                     let amountToDeposit = (currentSediment - sedimentCapacity) * depositionRate;
                     let maxAllowed = Math.max(0, waterLevel);
                     amountToDeposit = Math.min(amountToDeposit, maxAllowed);
-                    const weights = [[0.01, 0.04, 0.01], [0.04, 0.60, 0.04], [0.01, 0.04, 0.01]];
-                    for (let dzInner = -1; dzInner <= 1; dzInner++) {
-                        for (let dxInner = -1; dxInner <= 1; dxInner++) {
-                            let nIdx = (z + dzInner) * (segments + 1) + (x + dxInner);
-                            let weight = weights[dzInner + 1][dxInner + 1];
-                            let actualDeposit = amountToDeposit * weight;
-                            positions[nIdx * 3 + 1] += actualDeposit;
-                            if (dzInner === 0 && dxInner === 0) terrainModule.nextSediment[idx] -= amountToDeposit;
+                    if (amountToDeposit > 0.005) {
+                        const weights = [[0.01, 0.04, 0.01], [0.04, 0.60, 0.04], [0.01, 0.04, 0.01]];
+                        for (let dzInner = -1; dzInner <= 1; dzInner++) {
+                            for (let dxInner = -1; dxInner <= 1; dxInner++) {
+                                let nIdx = (z + dzInner) * (segments + 1) + (x + dxInner);
+                                let weight = weights[dzInner + 1][dxInner + 1];
+                                let actualDeposit = amountToDeposit * weight;
+                                if (actualDeposit > 0.001) {
+                                    positions[nIdx * 3 + 1] += actualDeposit;
+                                    if (dzInner === 0 && dxInner === 0) terrainModule.nextSediment[idx] -= amountToDeposit;
 
-                            let nxIdx = nIdx % (segments + 1);
-                            let nzIdx = Math.floor(nIdx / (segments + 1));
-                            if (nxIdx > 0 && nxIdx < segments && nzIdx > 0 && nzIdx < segments) {
-                                terrainModule.hardness[nIdx] = Math.max(0.0, terrainModule.hardness[nIdx] - actualDeposit * 2.0);
-                                let h = positions[nIdx * 3 + 1];
-                                let blend = Math.min(1.0, Math.max(0.0, h / 2.0));
-                                let targetR = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend);
-                                let targetG = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend);
-                                let targetB = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend);
-                                colors[nIdx * 3] = Math.min(targetR, colors[nIdx * 3] + 0.01);
-                                colors[nIdx * 3 + 1] = Math.min(targetG, colors[nIdx * 3 + 1] + 0.01);
-                                colors[nIdx * 3 + 2] = Math.min(targetB, colors[nIdx * 3 + 2] + 0.01);
+                                    let nxIdx = nIdx % (segments + 1);
+                                    let nzIdx = Math.floor(nIdx / (segments + 1));
+                                    if (nxIdx > 0 && nxIdx < segments && nzIdx > 0 && nzIdx < segments) {
+                                        terrainModule.hardness[nIdx] = Math.max(0.0, terrainModule.hardness[nIdx] - actualDeposit * 2.0);
+                                        let h = positions[nIdx * 3 + 1];
+                                        let blend = Math.min(1.0, Math.max(0.0, h / 2.0));
+                                        let targetR = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend);
+                                        let targetG = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend);
+                                        let targetB = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend);
+                                        
+                                        let oldR = colors[nIdx * 3];
+                                        colors[nIdx * 3] = Math.min(targetR, colors[nIdx * 3] + 0.01);
+                                        colors[nIdx * 3 + 1] = Math.min(targetG, colors[nIdx * 3 + 1] + 0.01);
+                                        colors[nIdx * 3 + 2] = Math.min(targetB, colors[nIdx * 3 + 2] + 0.01);
+
+                                        if (Math.abs(oldR - colors[nIdx * 3]) > 0.001 || actualDeposit > 0.005) {
+                                            geometryNeedsUpdate = true;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    geometryNeedsUpdate = true;
                 }
             }
         }

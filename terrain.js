@@ -181,18 +181,21 @@ export function updateWaterMesh() {
     for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
         const depth = waterDepths[i];
 
-        // Fading logic: If depth is less than 0.05, it starts fading.
-        const fadeThreshold = 0.05;
+        // Fading logic: If depth is less than 0.1, it starts fading smoothly.
+        // Also ensure depth has to be greater than a slightly higher threshold to display.
+        const fadeThreshold = 0.1;
         const fade = Math.min(1.0, depth / fadeThreshold);
 
-        if (depth > 0.001) {
-            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.02;
+        if (depth > 0.005) { // Increased minimum visible depth threshold
+            // Increased the physical offset slightly to prevent z-fighting on steep slopes
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.05;
 
             // Calculate display alpha (Simulated prop * depth-fade)
             // Global opacity is handled at the Material level (this.opacity)
-            dAlphas[i] = waterColors[i * 4 + 3] * fade;
+            // Use ease-in fading for smoother visual disappearance before z-fighting starts
+            dAlphas[i] = waterColors[i * 4 + 3] * (fade * fade); 
         } else {
-            wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0;
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0; // Hide well below terrain
             dAlphas[i] = 0;
         }
     }
