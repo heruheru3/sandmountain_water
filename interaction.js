@@ -2,6 +2,15 @@ import * as THREE from 'three';
 import * as state from './state.js';
 import * as terrainModule from './terrain.js';
 import { camera, scene, controls } from './scene.js';
+import {
+    configRainRadius,
+    configRainCount,
+    configBrushRadius,
+    configBuildStrength,
+    configMaxFlowFactor,
+    configBrushSharpness,
+    configMaxSlope
+} from './config.js';
 
 export const raycaster = new THREE.Raycaster();
 export const mouse = new THREE.Vector2();
@@ -160,32 +169,53 @@ export function initInteraction() {
 
     // Initialize UI with state values
     if (rainRadiusSlider) {
+        rainRadiusSlider.min = configRainRadius.min;
+        rainRadiusSlider.max = configRainRadius.max;
+        rainRadiusSlider.step = configRainRadius.step;
         rainRadiusSlider.value = state.rainRadius;
         rainRadiusVal.textContent = state.rainRadius;
         cursorMesh.geometry.dispose();
         cursorMesh.geometry = new THREE.RingGeometry(state.rainRadius - 0.3, state.rainRadius + 0.3, 48);
     }
     if (rainAmountSlider) {
+        rainAmountSlider.min = configRainCount.min;
+        rainAmountSlider.max = configRainCount.max;
+        rainAmountSlider.step = configRainCount.step;
         rainAmountSlider.value = state.rainCount;
         rainAmountVal.textContent = state.rainCount;
     }
     if (mountainRadiusSlider) {
+        mountainRadiusSlider.min = configBrushRadius.min;
+        mountainRadiusSlider.max = configBrushRadius.max;
+        mountainRadiusSlider.step = configBrushRadius.step;
         mountainRadiusSlider.value = state.brushRadius;
         mountainRadiusVal.textContent = state.brushRadius;
     }
     if (buildStrengthSlider) {
+        buildStrengthSlider.min = configBuildStrength.min;
+        buildStrengthSlider.max = configBuildStrength.max;
+        buildStrengthSlider.step = configBuildStrength.step;
         buildStrengthSlider.value = state.buildStrength;
         buildStrengthVal.textContent = state.buildStrength;
     }
     if (maxFlowSlider) {
+        maxFlowSlider.min = configMaxFlowFactor.min;
+        maxFlowSlider.max = configMaxFlowFactor.max;
+        maxFlowSlider.step = configMaxFlowFactor.step;
         maxFlowSlider.value = state.maxFlowFactor;
         maxFlowVal.textContent = state.maxFlowFactor;
     }
     if (sharpnessSlider) {
+        sharpnessSlider.min = configBrushSharpness.min;
+        sharpnessSlider.max = configBrushSharpness.max;
+        sharpnessSlider.step = configBrushSharpness.step;
         sharpnessSlider.value = state.brushSharpness;
         sharpnessVal.textContent = state.brushSharpness;
     }
     if (maxSlopeSlider) {
+        maxSlopeSlider.min = configMaxSlope.min;
+        maxSlopeSlider.max = configMaxSlope.max;
+        maxSlopeSlider.step = configMaxSlope.step;
         maxSlopeSlider.value = state.maxSlope;
         maxSlopeVal.textContent = state.maxSlope;
     }

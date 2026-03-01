@@ -20,30 +20,39 @@ export const maxHeight = 1000;    // 山の最大高度
 export const bedrockLimit = 1; // 地盤の最低高度（これ以上掘れない）
 
 // --- シミュレーション・パラメータ ---
-export const defaultMaxSlope = 3;             // 砂が崩れ始める最大傾斜
 export const slumpRate = 0.8;            // 砂が崩れる際の速度 (0〜1)
 export const evaporation = 0.0002;       // フレームごとの水の蒸発量 (微量に設定)
 export const sedimentCapacityFactor = 4.0; // 水が運べる土砂の容量係数 (下げて安定化)
 export const erosionRate = 0.4;          // 地形が削れる速度
 export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度
-export const defaultMaxFlowFactor = 0.2; // 水の流動性係数（高いほど速く流れる）
 
-// --- スライダーの初期値 ---
-export const defaultRainRadius = 1;      // 雨の範囲の初期値
-export const defaultRainCount = 10;       // 雨の量の初期値
-export const defaultBrushRadius = 15;    // 山のブラシ半径の初期値
-export const defaultBuildStrength = 0.5; // 地形変形強度の初期値
-export const defaultBrushSharpness = 2.0; // ブラシの鋭さ（falloffの指数）
+// --- スライダーの初期値と範囲 ---
+export const configRainRadius = { default: 1.0, min: 1.0, max: 20.0, step: 0.5 };
+export const configRainCount = { default: 10, min: 1, max: 100, step: 1 };
+export const configBrushRadius = { default: 15.0, min: 1.0, max: 40.0, step: 0.5 };
+export const configBuildStrength = { default: 0.2, min: 0.01, max: 1.0, step: 0.01 };
+export const configMaxFlowFactor = { default: 0.2, min: 0.01, max: 1.0, step: 0.01 };
+export const configBrushSharpness = { default: 2.0, min: 0.1, max: 10.0, step: 0.1 };
+export const configMaxSlope = { default: 3.0, min: 0.5, max: 50.0, step: 0.5 };
 export const defaultSmoothing = false;    // スムージングの初期設定 (true = Smooth, false = Flat)
+
+// For backward compatibility or simpler access
+export const defaultRainRadius = configRainRadius.default;
+export const defaultRainCount = configRainCount.default;
+export const defaultBrushRadius = configBrushRadius.default;
+export const defaultBuildStrength = configBuildStrength.default;
+export const defaultMaxFlowFactor = configMaxFlowFactor.default;
+export const defaultBrushSharpness = configBrushSharpness.default;
+export const defaultMaxSlope = configMaxSlope.default;
 
 // --- ランダム地形生成のパラメタ ---
 export const randomHillCountMin = 5;
 export const randomHillCountMax = 10;
 export const randomHillRadiusMin = 10;
-export const randomHillRadiusMax = 40;
+export const randomHillRadiusMax = 30;
 export const randomHillStrengthMin = 2; // 前より高く (0.1 -> 0.3)
-export const randomHillStrengthMax = 40; // 前より高く (0.3 -> 0.8)
+export const randomHillStrengthMax = 30; // 前より高く (0.3 -> 0.8)
 
 // --- 雨の降下パラメタ ---
 export const rainDropAmount = 0.2;        // マウス位置の1滴あたりの水量
