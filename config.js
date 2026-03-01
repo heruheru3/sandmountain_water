@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 // --- 地形の基本設定 ---
-export const terrainWidth = 100;  // 地形の幅
-export const terrainDepth = 100;  // 地形の奥行き
+export const terrainWidth = 200;  // 地形の幅
+export const terrainDepth = 200;  // 地形の奥行き
 export const segments = 100;      // グリッドの分割数（解像度）
 export const showGrid = true;     // グリッドヘルパーを表示するか
 
@@ -36,7 +36,10 @@ export const configBuildStrength = { default: 0.2, min: 0.01, max: 1.0, step: 0.
 export const configMaxFlowFactor = { default: 0.2, min: 0.01, max: 1.0, step: 0.01 };
 export const configBrushSharpness = { default: 2.0, min: 0.1, max: 10.0, step: 0.1 };
 export const configMaxSlope = { default: 3.0, min: 0.5, max: 50.0, step: 0.5 };
-export const configWaterOpacity = { default: 0.7, min: 0.1, max: 1.0, step: 0.01 };
+export const configWaterOpacity = { default: 0.5, min: 0.1, max: 1.0, step: 0.01 };
+export const configWaterRoughness = 0.4;
+export const configWaterMetalness = 0.4;
+export const configLightIntensity = 1.2;
 export const defaultSmoothing = false;    // スムージングの初期設定 (true = Smooth, false = Flat)
 
 // For backward compatibility or simpler access
@@ -48,6 +51,9 @@ export const defaultMaxFlowFactor = configMaxFlowFactor.default;
 export const defaultBrushSharpness = configBrushSharpness.default;
 export const defaultMaxSlope = configMaxSlope.default;
 export const defaultWaterOpacity = configWaterOpacity.default;
+export const defaultWaterRoughness = configWaterRoughness;
+export const defaultWaterMetalness = configWaterMetalness;
+export const defaultLightIntensity = configLightIntensity;
 
 // --- ランダム地形生成のパラメタ ---
 export const randomHillCountMin = 5;

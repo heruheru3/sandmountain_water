@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -35,8 +35,8 @@ export const waterPlaneMat = new THREE.MeshStandardMaterial({
     vertexColors: true, // Use vertex colors
     transparent: true,
     opacity: defaultWaterOpacity,
-    roughness: 0.1,
-    metalness: 0.2,
+    roughness: defaultWaterRoughness,
+    metalness: defaultWaterMetalness,
     flatShading: false,
     depthWrite: false,
     polygonOffset: true,
@@ -55,31 +55,64 @@ waterPlaneGeo.setAttribute('color', new THREE.BufferAttribute(waterColors, 3));
 export const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
 scene.add(waterPlane);
 
-export function updateTerrainColors() {
+export function updateTerrainColors(point = null, radius = null) {
     const positions = geometry.attributes.position.array;
     const colors = geometry.attributes.color.array;
-    for (let i = 0; i < positions.length / 3; i++) {
-        const xIdx = i % (segments + 1);
-        const zIdx = Math.floor(i / (segments + 1));
-        const currentH = positions[i * 3 + 1];
 
-        let targetColor;
-        if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
-            targetColor = colorBorder;
-        } else {
-            // Updated logic: Use hardness to determine color.
-            // Original terrain (hardness 1.0) stays green regardless of height.
-            if (hardness[i] < 0.2) {
-                targetColor = colorRock;
-            } else if (hardness[i] < 0.99) {
-                targetColor = colorSand;
-            } else {
-                targetColor = colorGrass;
+    // If point and radius are provided, only update a local area to save performance
+    if (point && radius) {
+        // Expand radius slightly to catch neighbors/slumping
+        const updateRadius = radius * 1.5;
+        for (let i = 0; i < positions.length / 3; i++) {
+            const vx = positions[i * 3];
+            const vz = positions[i * 3 + 2];
+            const dx = vx - point.x;
+            const dz = vz - point.z;
+            if (dx * dx + dz * dz < updateRadius * updateRadius) {
+                const xIdx = i % (segments + 1);
+                const zIdx = Math.floor(i / (segments + 1));
+                const currentH = positions[i * 3 + 1];
+
+                let targetColor;
+                if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
+                    targetColor = colorBorder;
+                } else {
+                    if (hardness[i] < 0.2) {
+                        targetColor = colorRock;
+                    } else if (hardness[i] < 0.99) {
+                        targetColor = colorSand;
+                    } else {
+                        targetColor = colorGrass;
+                    }
+                }
+                colors[i * 3] = targetColor.r;
+                colors[i * 3 + 1] = targetColor.g;
+                colors[i * 3 + 2] = targetColor.b;
             }
         }
-        colors[i * 3] = targetColor.r;
-        colors[i * 3 + 1] = targetColor.g;
-        colors[i * 3 + 2] = targetColor.b;
+    } else {
+        // Fallback: Full update
+        for (let i = 0; i < positions.length / 3; i++) {
+            const xIdx = i % (segments + 1);
+            const zIdx = Math.floor(i / (segments + 1));
+            const currentH = positions[i * 3 + 1];
+
+            let targetColor;
+            if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
+                targetColor = colorBorder;
+            } else {
+                if (hardness[i] < 0.2) {
+                    targetColor = colorRock;
+                } else if (hardness[i] < 0.99) {
+                    targetColor = colorSand;
+                } else {
+                    targetColor = colorGrass;
+                }
+            }
+            colors[i * 3] = targetColor.r;
+            colors[i * 3 + 1] = targetColor.g;
+            colors[i * 3 + 2] = targetColor.b;
+        }
     }
     geometry.attributes.color.needsUpdate = true;
 }
@@ -110,65 +143,34 @@ export function initTerrain() {
 export function updateWaterMesh() {
     const tPos = geometry.attributes.position.array;
     const wPos = waterPlaneGeo.attributes.position.array;
+    const colors = waterPlaneGeo.attributes.color.array;
 
-    for (let z = 0; z <= segments; z++) {
-        for (let x = 0; x <= segments; x++) {
-            const idx = z * (segments + 1) + x;
-            let avgDepth = 0;
-            let count = 0;
-            for (let dz = -1; dz <= 1; dz++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    let nz = z + dz;
-                    let nx = x + dx;
-                    if (nz >= 0 && nz <= segments && nx >= 0 && nx <= segments) {
-                        avgDepth += waterDepths[nz * (segments + 1) + nx];
-                        count++;
-                    }
-                }
-            }
-            avgDepth /= count;
-            const depth = waterDepths[idx];
-            if (avgDepth > 0.01 || depth > 0.01) {
-                const displayDepth = Math.max(depth, avgDepth * 0.5);
-                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] + displayDepth + 0.05;
-
-                // INTERPOLATE COLOR: If we are lifting this vertex, 
-                // calculate an averaged color from neighbors to prevent blue edges.
-                let avgR = 0, avgG = 0, avgB = 0;
-                let cCount = 0;
-                for (let dz = -1; dz <= 1; dz++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        let nz = z + dz;
-                        let nx = x + dx;
-                        if (nz >= 0 && nz <= segments && nx >= 0 && nx <= segments) {
-                            let nIdx = nz * (segments + 1) + nx;
-                            if (waterDepths[nIdx] > 0.001) {
-                                avgR += waterColors[nIdx * 3];
-                                avgG += waterColors[nIdx * 3 + 1];
-                                avgB += waterColors[nIdx * 3 + 2];
-                                cCount++;
-                            }
-                        }
-                    }
-                }
-                if (cCount > 0) {
-                    waterColors[idx * 3] = avgR / cCount;
-                    waterColors[idx * 3 + 1] = avgG / cCount;
-                    waterColors[idx * 3 + 2] = avgB / cCount;
-                }
-            } else {
-                wPos[idx * 3 + 1] = tPos[idx * 3 + 1] - 10.0;
-            }
+    for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
+        const depth = waterDepths[i];
+        if (depth > 0.01) {
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.05;
+            // Sync colors directly from the live buffer
+            colors[i * 3] = waterColors[i * 3];
+            colors[i * 3 + 1] = waterColors[i * 3 + 1];
+            colors[i * 3 + 2] = waterColors[i * 3 + 2];
+        } else {
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0;
         }
     }
-    waterPlaneGeo.computeVertexNormals();
     waterPlaneGeo.attributes.position.needsUpdate = true;
+    waterPlaneGeo.attributes.color.needsUpdate = true;
 }
 
-export function slumpTerrain() {
+export function slumpTerrain(point = null, radius = null) {
     const positions = geometry.attributes.position.array;
-    for (let z = 1; z < segments; z++) {
-        for (let x = 1; x < segments; x++) {
+
+    const zStart = point ? Math.max(1, Math.floor((point.z - radius * 1.5 + terrainDepth / 2) / terrainDepth * segments)) : 1;
+    const zEnd = point ? Math.min(segments - 1, Math.ceil((point.z + radius * 1.5 + terrainDepth / 2) / terrainDepth * segments)) : segments - 1;
+    const xStart = point ? Math.max(1, Math.floor((point.x - radius * 1.5 + terrainWidth / 2) / terrainWidth * segments)) : 1;
+    const xEnd = point ? Math.min(segments - 1, Math.ceil((point.x + radius * 1.5 + terrainWidth / 2) / terrainWidth * segments)) : segments - 1;
+
+    for (let z = zStart; z <= zEnd; z++) {
+        for (let x = xStart; x <= xEnd; x++) {
             let idx = (z * (segments + 1) + x);
             let h = positions[idx * 3 + 1];
             let neighbors = [
@@ -192,6 +194,48 @@ export function slumpTerrain() {
     }
 }
 
+export function updateLocalNormals(point, radius) {
+    const positions = geometry.attributes.position.array;
+    const normals = geometry.attributes.normal.array;
+    const segmentsPlusOne = segments + 1;
+
+    const zStart = Math.max(1, Math.floor((point.z - radius * 2 + terrainDepth / 2) / terrainDepth * segments));
+    const zEnd = Math.min(segments - 1, Math.ceil((point.z + radius * 2 + terrainDepth / 2) / terrainDepth * segments));
+    const xStart = Math.max(1, Math.floor((point.x - radius * 2 + terrainWidth / 2) / terrainWidth * segments));
+    const xEnd = Math.min(segments - 1, Math.ceil((point.x + radius * 2 + terrainWidth / 2) / terrainWidth * segments));
+
+    const vL = new THREE.Vector3();
+    const vR = new THREE.Vector3();
+    const vU = new THREE.Vector3();
+    const vD = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+
+    for (let z = zStart; z <= zEnd; z++) {
+        for (let x = xStart; x <= xEnd; x++) {
+            const idx = z * segmentsPlusOne + x;
+
+            const idxL = z * segmentsPlusOne + (x - 1);
+            const idxR = z * segmentsPlusOne + (x + 1);
+            const idxU = (z - 1) * segmentsPlusOne + x;
+            const idxD = (z + 1) * segmentsPlusOne + x;
+
+            vL.set(positions[idxL * 3], positions[idxL * 3 + 1], positions[idxL * 3 + 2]);
+            vR.set(positions[idxR * 3], positions[idxR * 3 + 1], positions[idxR * 3 + 2]);
+            vU.set(positions[idxU * 3], positions[idxU * 3 + 1], positions[idxU * 3 + 2]);
+            vD.set(positions[idxD * 3], positions[idxD * 3 + 1], positions[idxD * 3 + 2]);
+
+            const tangentX = vR.sub(vL);
+            const tangentZ = vD.sub(vU);
+            normal.crossVectors(tangentZ, tangentX).normalize();
+
+            normals[idx * 3] = normal.x;
+            normals[idx * 3 + 1] = normal.y;
+            normals[idx * 3 + 2] = normal.z;
+        }
+    }
+    geometry.attributes.normal.needsUpdate = true;
+}
+
 export function buildMountain(point) {
     const positions = geometry.attributes.position.array;
     const radius = state.brushRadius;
@@ -203,9 +247,9 @@ export function buildMountain(point) {
         const currentH = positions[i + 1];
         const dx = vx - point.x;
         const dz = vz - point.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance < radius) {
+        if (dx * dx + dz * dz < radius * radius) {
             let idx = i / 3;
+            const distance = Math.sqrt(dx * dx + dz * dz);
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const heightFactor = Math.max(0, 1.0 - (currentH / maxHeight) * (currentH / maxHeight));
             positions[i + 1] = Math.min(maxHeight, currentH + strength * falloff * heightFactor);
@@ -214,11 +258,10 @@ export function buildMountain(point) {
         }
     }
     if (changed) {
-        slumpTerrain();
-        updateTerrainColors();
+        slumpTerrain(point, radius);
+        updateTerrainColors(point, radius);
         geometry.attributes.position.needsUpdate = true;
-        geometry.computeVertexNormals();
-        updateWaterMesh();
+        updateLocalNormals(point, radius);
     }
 }
 
@@ -232,8 +275,9 @@ export function lowerTerrain(point) {
         const vz = positions[i + 2];
         const dx = vx - point.x;
         const dz = vz - point.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance < radius) {
+        const d2 = dx * dx + dz * dz;
+        if (d2 < radius * radius) {
+            const distance = Math.sqrt(d2);
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const newH = positions[i + 1] - strength * falloff;
             positions[i + 1] = Math.max(bedrockLimit, newH);
@@ -243,11 +287,10 @@ export function lowerTerrain(point) {
         }
     }
     if (changed) {
-        slumpTerrain();
-        updateTerrainColors();
+        slumpTerrain(point, radius);
+        updateTerrainColors(point, radius);
         geometry.attributes.position.needsUpdate = true;
-        geometry.computeVertexNormals();
-        updateWaterMesh();
+        updateLocalNormals(point, radius);
     }
 }
 

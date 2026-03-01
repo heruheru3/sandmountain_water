@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { terrainWidth, segments, showGrid } from './config.js';
+import { terrainWidth, segments, showGrid, defaultLightIntensity } from './config.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
@@ -31,7 +31,7 @@ controls.mouseButtons = {
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(ambientLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+const dirLight = new THREE.DirectionalLight(0xffffff, defaultLightIntensity);
 dirLight.position.set(terrainWidth * 0.5, 100, terrainWidth * 0.5);
 dirLight.castShadow = true;
 scene.add(dirLight);
