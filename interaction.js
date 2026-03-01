@@ -36,24 +36,34 @@ export function initInteraction() {
 
     let lastRightClickTime = 0;
     const doubleClickThreshold = 300;
+    let rightClickTimeout = null;
 
     window.addEventListener('pointerdown', (e) => {
         if (e.target.closest('#ui-container')) return;
         if (e.button === 0) state.setDrawing(true);
         if (e.button === 2) {
+            const now = Date.now();
+            const isClickSequence = (now - lastRightClickTime < doubleClickThreshold);
+
             if (state.isShiftHeld) {
-                // Shift + Right is handled by OrbitControls for Pan
+                // Shift + Right Click triggers water source placement/removal
+                handleRightDoubleClick(e);
+                lastRightClickTime = 0; // Prevent ensuing rain
+            } else if (isClickSequence) {
+                // Right Double Click detected
+                clearTimeout(rightClickTimeout);
+                handleRightDoubleClick(e);
+                lastRightClickTime = 0; // Reset after double click
+                state.setRightClicking(false);
             } else {
-                const now = Date.now();
-                if (now - lastRightClickTime < doubleClickThreshold) {
-                    // Right Double Click detected
-                    handleRightDoubleClick(e);
-                    lastRightClickTime = 0; // Reset after double click
-                    state.setRightClicking(false); // Cancel the hold-rain for double clicks
-                } else {
-                    state.setRightClicking(true);
-                    lastRightClickTime = now;
-                }
+                // Potential start of hold-rain OR start of double-click
+                lastRightClickTime = now;
+                // Only start raining if button still down after threshold
+                rightClickTimeout = setTimeout(() => {
+                    if (e.buttons & 2) { // 2 = Right button still held
+                        state.setRightClicking(true);
+                    }
+                }, doubleClickThreshold);
             }
         }
     });
@@ -88,7 +98,10 @@ export function initInteraction() {
     window.addEventListener('pointerup', (e) => {
         if (e.target.closest('#ui-container')) return;
         if (e.button === 0) state.setDrawing(false);
-        if (e.button === 2) state.setRightClicking(false);
+        if (e.button === 2) {
+            state.setRightClicking(false);
+            clearTimeout(rightClickTimeout);
+        }
     });
 
     window.addEventListener('pointermove', (event) => {
@@ -133,6 +146,10 @@ export function initInteraction() {
     const buildStrengthVal = document.getElementById('buildStrengthVal');
     const maxFlowSlider = document.getElementById('maxFlowFactor');
     const maxFlowVal = document.getElementById('maxFlowVal');
+    const sharpnessSlider = document.getElementById('brushSharpness');
+    const sharpnessVal = document.getElementById('sharpnessVal');
+    const maxSlopeSlider = document.getElementById('maxSlope');
+    const maxSlopeVal = document.getElementById('maxSlopeVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -163,6 +180,14 @@ export function initInteraction() {
     if (maxFlowSlider) {
         maxFlowSlider.value = state.maxFlowFactor;
         maxFlowVal.textContent = state.maxFlowFactor;
+    }
+    if (sharpnessSlider) {
+        sharpnessSlider.value = state.brushSharpness;
+        sharpnessVal.textContent = state.brushSharpness;
+    }
+    if (maxSlopeSlider) {
+        maxSlopeSlider.value = state.maxSlope;
+        maxSlopeVal.textContent = state.maxSlope;
     }
     if (smoothShadingToggle) {
         smoothShadingToggle.checked = state.useSmoothing;
@@ -202,6 +227,20 @@ export function initInteraction() {
         maxFlowSlider.addEventListener('input', () => {
             state.setMaxFlowFactor(parseFloat(maxFlowSlider.value));
             maxFlowVal.textContent = state.maxFlowFactor;
+        });
+    }
+
+    if (sharpnessSlider) {
+        sharpnessSlider.addEventListener('input', () => {
+            state.setBrushSharpness(parseFloat(sharpnessSlider.value));
+            sharpnessVal.textContent = state.brushSharpness;
+        });
+    }
+
+    if (maxSlopeSlider) {
+        maxSlopeSlider.addEventListener('input', () => {
+            state.setMaxSlope(parseFloat(maxSlopeSlider.value));
+            maxSlopeVal.textContent = state.maxSlope;
         });
     }
 

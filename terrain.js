@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, maxSlope, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -133,8 +133,8 @@ export function slumpTerrain() {
                 if (nIdx < 0 || nIdx >= (segments + 1) * (segments + 1)) continue;
                 let nH = positions[nIdx * 3 + 1];
                 let diff = h - nH;
-                if (diff > maxSlope) {
-                    let transfer = (diff - maxSlope) * slumpRate * 0.5;
+                if (diff > state.maxSlope) {
+                    let transfer = (diff - state.maxSlope) * slumpRate * 0.5;
                     positions[idx * 3 + 1] -= transfer;
                     positions[nIdx * 3 + 1] += transfer;
                     h -= transfer;
@@ -158,7 +158,7 @@ export function buildMountain(point) {
         const distance = Math.sqrt(dx * dx + dz * dz);
         if (distance < radius) {
             let idx = i / 3;
-            const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), 2);
+            const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const heightFactor = Math.max(0, 1.0 - (currentH / maxHeight) * (currentH / maxHeight));
             positions[i + 1] = Math.min(maxHeight, currentH + strength * falloff * heightFactor);
             hardness[idx] -= strength * falloff * heightFactor;
@@ -196,7 +196,7 @@ export function lowerTerrain(point) {
         const dz = vz - point.z;
         const distance = Math.sqrt(dx * dx + dz * dz);
         if (distance < radius) {
-            const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), 2);
+            const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const newH = positions[i + 1] - strength * falloff;
             positions[i + 1] = Math.max(bedrockLimit, newH);
             const colors = geometry.attributes.color.array;

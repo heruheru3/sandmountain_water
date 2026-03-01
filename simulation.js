@@ -59,17 +59,26 @@ export function spawnSourceWater() {
     state.waterSources.forEach((source, sIdx) => {
         let gridX = Math.round((source.x + terrainWidth / 2) / terrainWidth * segments);
         let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
-        if (gridX > 0 && gridX < segments && gridZ > 0 && gridZ < segments) {
-            let idx = gridZ * (segments + 1) + gridX;
-            terrainModule.waterDepths[idx] += 0.5;
 
-            // Generate a unique color for each source based on its ID/index
-            // We shift hue slightly for each source
-            const tint = new THREE.Color().setHSL((sIdx * 0.13) % 1.0, 0.7, 0.6);
-            // Blend existing color with this source tint
-            terrainModule.waterColors[idx * 3] = tint.r;
-            terrainModule.waterColors[idx * 3 + 1] = tint.g;
-            terrainModule.waterColors[idx * 3 + 2] = tint.b;
+        // Generate a unique color for each source
+        const tint = new THREE.Color().setHSL((sIdx * 0.23) % 1.0, 0.6, 0.5);
+
+        // Color a 3x3 area to prevent blue edges due to averaging in updateWaterMesh
+        for (let dz = -1; dz <= 1; dz++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                let nx = gridX + dx;
+                let nz = gridZ + dz;
+                if (nx > 0 && nx < segments && nz > 0 && nz < segments) {
+                    let nIdx = nz * (segments + 1) + nx;
+                    if (dx === 0 && dz === 0) {
+                        terrainModule.waterDepths[nIdx] += 0.5;
+                    }
+                    // Apply tint to the neighbors too so lifted vertices aren't blue
+                    terrainModule.waterColors[nIdx * 3] = tint.r;
+                    terrainModule.waterColors[nIdx * 3 + 1] = tint.g;
+                    terrainModule.waterColors[nIdx * 3 + 2] = tint.b;
+                }
+            }
         }
     });
 }
@@ -126,12 +135,13 @@ export function updateSimulation(mouse) {
                         terrainModule.nextWaterDepths[idx] -= flow;
                         terrainModule.nextWaterDepths[nIdx] += flow;
 
-                        // TRANSPORT COLOR: The target cell's color becomes a weighted average of its current color
-                        // and the incoming water's color.
+                        // TRANSPORT COLOR: Move color with water
                         let currentColorAmt = terrainModule.waterDepths[nIdx];
                         let totalNewWater = currentColorAmt + flow;
-                        if (totalNewWater > 0.001) {
-                            let fRatio = flow / totalNewWater;
+                        if (totalNewWater > 1e-6) {
+                            // If target was dry, take incoming color completely. 
+                            // Otherwise blend based on volume ratio.
+                            let fRatio = currentColorAmt <= 0 ? 1.0 : flow / totalNewWater;
                             nextWaterColors[nIdx * 3] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3], terrainModule.waterColors[idx * 3], fRatio);
                             nextWaterColors[nIdx * 3 + 1] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3 + 1], terrainModule.waterColors[idx * 3 + 1], fRatio);
                             nextWaterColors[nIdx * 3 + 2] = THREE.MathUtils.lerp(nextWaterColors[nIdx * 3 + 2], terrainModule.waterColors[idx * 3 + 2], fRatio);
