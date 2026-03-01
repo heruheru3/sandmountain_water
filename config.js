@@ -20,14 +20,14 @@ export const maxHeight = 1000;    // 山の最大高度
 export const bedrockLimit = 1; // 地盤の最低高度（これ以上掘れない）
 
 // --- シミュレーション・パラメータ ---
-export const defaultMaxSlope = 5;             // 砂が崩れ始める最大傾斜
+export const defaultMaxSlope = 3;             // 砂が崩れ始める最大傾斜
 export const slumpRate = 0.8;            // 砂が崩れる際の速度 (0〜1)
 export const evaporation = 0.0002;       // フレームごとの水の蒸発量 (微量に設定)
 export const sedimentCapacityFactor = 4.0; // 水が運べる土砂の容量係数 (下げて安定化)
 export const erosionRate = 0.4;          // 地形が削れる速度
 export const erosionMax = 0.3;           // 1フレームで削れる最大深さ
 export const depositionRate = 0.1;       // 土砂が堆積する速度
-export const defaultMaxFlowFactor = 0.25; // 水の流動性係数（高いほど速く流れる）
+export const defaultMaxFlowFactor = 0.2; // 水の流動性係数（高いほど速く流れる）
 
 // --- スライダーの初期値 ---
 export const defaultRainRadius = 1;      // 雨の範囲の初期値

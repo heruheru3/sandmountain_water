@@ -107,8 +107,32 @@ export function updateWaterMesh() {
             if (avgDepth > 0.01 || depth > 0.01) {
                 const displayDepth = Math.max(depth, avgDepth * 0.5);
                 wPos[idx * 3 + 1] = tPos[idx * 3 + 1] + displayDepth + 0.05;
+
+                // INTERPOLATE COLOR: If we are lifting this vertex, 
+                // calculate an averaged color from neighbors to prevent blue edges.
+                let avgR = 0, avgG = 0, avgB = 0;
+                let cCount = 0;
+                for (let dz = -1; dz <= 1; dz++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        let nz = z + dz;
+                        let nx = x + dx;
+                        if (nz >= 0 && nz <= segments && nx >= 0 && nx <= segments) {
+                            let nIdx = nz * (segments + 1) + nx;
+                            if (waterDepths[nIdx] > 0.001) {
+                                avgR += waterColors[nIdx * 3];
+                                avgG += waterColors[nIdx * 3 + 1];
+                                avgB += waterColors[nIdx * 3 + 2];
+                                cCount++;
+                            }
+                        }
+                    }
+                }
+                if (cCount > 0) {
+                    waterColors[idx * 3] = avgR / cCount;
+                    waterColors[idx * 3 + 1] = avgG / cCount;
+                    waterColors[idx * 3 + 2] = avgB / cCount;
+                }
             } else {
-                // 水がない場所は地中に深く沈める（Z-fighting対策）
                 wPos[idx * 3 + 1] = tPos[idx * 3 + 1] - 10.0;
             }
         }
