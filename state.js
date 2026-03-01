@@ -1,4 +1,4 @@
-import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope } from './config.js';
+import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity } from './config.js';
 
 export let brushRadius = defaultBrushRadius;
 export let buildStrength = defaultBuildStrength;
@@ -8,6 +8,7 @@ export let useSmoothing = defaultSmoothing;
 export let maxFlowFactor = defaultMaxFlowFactor;
 export let brushSharpness = defaultBrushSharpness;
 export let maxSlope = defaultMaxSlope;
+export let waterOpacity = defaultWaterOpacity;
 
 export let isDrawing = false;
 export let isRightClicking = false;
@@ -29,6 +30,7 @@ export function setUseSmoothing(val) { useSmoothing = val; }
 export function setMaxFlowFactor(val) { maxFlowFactor = val; }
 export function setBrushSharpness(val) { brushSharpness = val; }
 export function setMaxSlope(val) { maxSlope = val; }
+export function setWaterOpacity(val) { waterOpacity = val; }
 
 import { colorGrass, colorSand, colorRock, colorBorder } from './config.js';
 

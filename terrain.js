@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -34,7 +34,7 @@ waterPlaneGeo.rotateX(-Math.PI / 2);
 export const waterPlaneMat = new THREE.MeshStandardMaterial({
     vertexColors: true, // Use vertex colors
     transparent: true,
-    opacity: 0.7,
+    opacity: defaultWaterOpacity,
     roughness: 0.1,
     metalness: 0.2,
     flatShading: false,
@@ -67,11 +67,12 @@ export function updateTerrainColors() {
         if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
             targetColor = colorBorder;
         } else {
-            // Simple height/hardness check to pick color
-            if (currentH > bedrockLimit + 2) {
-                targetColor = colorSand;
-            } else if (hardness[i] < 1.0) {
+            // Updated logic: Use hardness to determine color.
+            // Original terrain (hardness 1.0) stays green regardless of height.
+            if (hardness[i] < 0.2) {
                 targetColor = colorRock;
+            } else if (hardness[i] < 0.99) {
+                targetColor = colorSand;
             } else {
                 targetColor = colorGrass;
             }
@@ -208,8 +209,7 @@ export function buildMountain(point) {
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const heightFactor = Math.max(0, 1.0 - (currentH / maxHeight) * (currentH / maxHeight));
             positions[i + 1] = Math.min(maxHeight, currentH + strength * falloff * heightFactor);
-            hardness[idx] -= strength * falloff * heightFactor;
-            hardness[idx] = Math.max(0.0, hardness[idx]);
+            hardness[idx] = 0.8; // 土を盛った場所は「砂」として色を変える
             changed = true;
         }
     }
@@ -237,6 +237,8 @@ export function lowerTerrain(point) {
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const newH = positions[i + 1] - strength * falloff;
             positions[i + 1] = Math.max(bedrockLimit, newH);
+            let idx = i / 3;
+            hardness[idx] = 0.1; // 削った場所は「岩（硬い）」として色を暗くする
             changed = true;
         }
     }

@@ -9,7 +9,8 @@ import {
     configBuildStrength,
     configMaxFlowFactor,
     configBrushSharpness,
-    configMaxSlope
+    configMaxSlope,
+    configWaterOpacity
 } from './config.js';
 
 export const raycaster = new THREE.Raycaster();
@@ -159,6 +160,8 @@ export function initInteraction() {
     const sharpnessVal = document.getElementById('sharpnessVal');
     const maxSlopeSlider = document.getElementById('maxSlope');
     const maxSlopeVal = document.getElementById('maxSlopeVal');
+    const waterOpacitySlider = document.getElementById('waterOpacity');
+    const waterOpacityVal = document.getElementById('waterOpacityVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -219,6 +222,13 @@ export function initInteraction() {
         maxSlopeSlider.value = state.maxSlope;
         maxSlopeVal.textContent = state.maxSlope;
     }
+    if (waterOpacitySlider) {
+        waterOpacitySlider.min = configWaterOpacity.min;
+        waterOpacitySlider.max = configWaterOpacity.max;
+        waterOpacitySlider.step = configWaterOpacity.step;
+        waterOpacitySlider.value = state.waterOpacity;
+        waterOpacityVal.textContent = state.waterOpacity;
+    }
     if (smoothShadingToggle) {
         smoothShadingToggle.checked = state.useSmoothing;
     }
@@ -274,6 +284,14 @@ export function initInteraction() {
         });
     }
 
+    if (waterOpacitySlider) {
+        waterOpacitySlider.addEventListener('input', () => {
+            state.setWaterOpacity(parseFloat(waterOpacitySlider.value));
+            waterOpacityVal.textContent = state.waterOpacity;
+            terrainModule.waterPlaneMat.opacity = state.waterOpacity;
+        });
+    }
+
     if (smoothShadingToggle) {
         smoothShadingToggle.addEventListener('change', () => {
             state.setUseSmoothing(smoothShadingToggle.checked);
@@ -312,7 +330,6 @@ export function initInteraction() {
     }
 
     // Color Pickers
-    state.loadSavedColors();
     ['colorGrass', 'colorSand', 'colorRock', 'colorBorder'].forEach(key => {
         const picker = document.getElementById(key + 'Picker');
         if (picker) {
