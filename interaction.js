@@ -310,4 +310,22 @@ export function initInteraction() {
             terrainModule.updateWaterMesh();
         });
     }
+
+    // Color Pickers
+    state.loadSavedColors();
+    ['colorGrass', 'colorSand', 'colorRock', 'colorBorder'].forEach(key => {
+        const picker = document.getElementById(key + 'Picker');
+        if (picker) {
+            // Set initial picker value from live config color
+            const currentConfigColor = terrainModule[key];
+            if (currentConfigColor) {
+                picker.value = '#' + currentConfigColor.getHexString();
+            }
+
+            picker.addEventListener('input', (e) => {
+                state.updateColor(key, e.target.value);
+                terrainModule.updateTerrainColors();
+            });
+        }
+    });
 }

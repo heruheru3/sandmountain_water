@@ -30,6 +30,30 @@ export function setMaxFlowFactor(val) { maxFlowFactor = val; }
 export function setBrushSharpness(val) { brushSharpness = val; }
 export function setMaxSlope(val) { maxSlope = val; }
 
+import { colorGrass, colorSand, colorRock, colorBorder } from './config.js';
+
+// Color sync
+export function updateColor(key, hex) {
+    if (key === 'colorGrass') colorGrass.set(hex);
+    if (key === 'colorSand') colorSand.set(hex);
+    if (key === 'colorRock') colorRock.set(hex);
+    if (key === 'colorBorder') colorBorder.set(hex);
+
+    // Persist to localStorage for next session
+    const colors = JSON.parse(localStorage.getItem('sandmountain_colors') || '{}');
+    colors[key] = hex;
+    localStorage.setItem('sandmountain_colors', JSON.stringify(colors));
+}
+
+// Load persisted colors on start
+export function loadSavedColors() {
+    const saved = localStorage.getItem('sandmountain_colors');
+    if (saved) {
+        const colors = JSON.parse(saved);
+        Object.keys(colors).forEach(key => updateColor(key, colors[key]));
+    }
+}
+
 export let waterSources = []; // [{id, x, z, marker}]
 
 export function addWaterSource(x, z, marker) {

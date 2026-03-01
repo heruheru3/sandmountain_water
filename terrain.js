@@ -3,6 +3,8 @@ import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock,
 import * as state from './state.js';
 import { scene } from './scene.js';
 
+export { colorGrass, colorSand, colorRock, colorBorder };
+
 export const geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, segments, segments);
 geometry.rotateX(-Math.PI / 2);
 
@@ -53,9 +55,37 @@ waterPlaneGeo.setAttribute('color', new THREE.BufferAttribute(waterColors, 3));
 export const waterPlane = new THREE.Mesh(waterPlaneGeo, waterPlaneMat);
 scene.add(waterPlane);
 
+export function updateTerrainColors() {
+    const positions = geometry.attributes.position.array;
+    const colors = geometry.attributes.color.array;
+    for (let i = 0; i < positions.length / 3; i++) {
+        const xIdx = i % (segments + 1);
+        const zIdx = Math.floor(i / (segments + 1));
+        const currentH = positions[i * 3 + 1];
+
+        let targetColor;
+        if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
+            targetColor = colorBorder;
+        } else {
+            // Simple height/hardness check to pick color
+            if (currentH > bedrockLimit + 2) {
+                targetColor = colorSand;
+            } else if (hardness[i] < 1.0) {
+                targetColor = colorRock;
+            } else {
+                targetColor = colorGrass;
+            }
+        }
+        colors[i * 3] = targetColor.r;
+        colors[i * 3 + 1] = targetColor.g;
+        colors[i * 3 + 2] = targetColor.b;
+    }
+    geometry.attributes.color.needsUpdate = true;
+}
+
 export function initTerrain() {
     const positions = geometry.attributes.position.array;
-    const colors = [];
+    const colors = new Float32Array(positions.length);
     for (let i = 0; i < positions.length / 3; i++) {
         const xIdx = i % (segments + 1);
         const zIdx = Math.floor(i / (segments + 1));
@@ -66,20 +96,13 @@ export function initTerrain() {
         const domeOffset = domeHeight * (1 - (dist / maxDist) ** 2);
         positions[i * 3 + 1] = domeOffset + bedrockLimit;
 
-        // 端の1マスを濃い色にする
-        if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
-            colors.push(colorBorder.r, colorBorder.g, colorBorder.b);
-        } else {
-            colors.push(colorGrass.r, colorGrass.g, colorGrass.b);
-        }
-
-        hardness[i] = 1.0; // 草地の初期硬度（完全に削れないように1.0に設定）
+        hardness[i] = 1.0;
         waterDepths[i] = 0;
         sediment[i] = 0;
     }
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    updateTerrainColors();
     geometry.attributes.position.needsUpdate = true;
-    geometry.attributes.color.needsUpdate = true;
     geometry.computeVertexNormals();
 }
 
@@ -188,21 +211,12 @@ export function buildMountain(point) {
             hardness[idx] -= strength * falloff * heightFactor;
             hardness[idx] = Math.max(0.0, hardness[idx]);
             changed = true;
-            const colors = geometry.attributes.color.array;
-            const xIdx = idx % (segments + 1);
-            const zIdx = Math.floor(idx / (segments + 1));
-            // 境界の色は変えない
-            if (xIdx > 0 && xIdx < segments && zIdx > 0 && zIdx < segments) {
-                colors[i] = colorSand.r;
-                colors[i + 1] = colorSand.g;
-                colors[i + 2] = colorSand.b;
-            }
         }
     }
     if (changed) {
         slumpTerrain();
+        updateTerrainColors();
         geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals();
         updateWaterMesh();
     }
@@ -223,22 +237,13 @@ export function lowerTerrain(point) {
             const falloff = Math.pow(Math.cos((distance / radius) * (Math.PI / 2)), state.brushSharpness);
             const newH = positions[i + 1] - strength * falloff;
             positions[i + 1] = Math.max(bedrockLimit, newH);
-            const colors = geometry.attributes.color.array;
-            let idx = i / 3;
-            const xIdx = idx % (segments + 1);
-            const zIdx = Math.floor(idx / (segments + 1));
-            // 境界の色は変えない
-            if (xIdx > 0 && xIdx < segments && zIdx > 0 && zIdx < segments) {
-                colors[i] = colorRock.r;
-                colors[i + 1] = colorRock.g;
-                colors[i + 2] = colorRock.b;
-            }
             changed = true;
         }
     }
     if (changed) {
+        slumpTerrain();
+        updateTerrainColors();
         geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
         geometry.computeVertexNormals();
         updateWaterMesh();
     }

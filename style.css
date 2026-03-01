@@ -81,6 +81,28 @@ canvas {
     }
 }
 
+.divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 15px 0;
+}
+
+h3 {
+    font-size: 0.9rem;
+    color: #4facfe;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+input[type="color"] {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 50px;
+    height: 30px;
+    cursor: pointer;
+}
+
 h1 {
     margin: 0 0 10px 0;
     font-size: 1.2rem;

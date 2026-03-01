@@ -6,12 +6,13 @@ export const terrainDepth = 100;  // 地形の奥行き
 export const segments = 100;      // グリッドの分割数（解像度）
 export const showGrid = true;     // グリッドヘルパーを表示するか
 
+import { defaultColors } from './user_settings.js';
+
 // --- 色の設定 ---
-// export const colorGrass = new THREE.Color(0x3a5f0b); // 基本の地面（草地）
-export const colorGrass = new THREE.Color(0xaaaaaa); // 基本の地面（草地）
-export const colorSand = new THREE.Color(0xeeeeee);  // 砂の色
-export const colorRock = new THREE.Color(0xdddddd);  // 削られた砂の色（少し暗いトーン）
-export const colorBorder = new THREE.Color(0x444444); // マップ端の境界線（濃い色）
+export const colorGrass = new THREE.Color(defaultColors.colorGrass); // 基本の地面（草地）
+export const colorSand = new THREE.Color(defaultColors.colorSand);   // 砂の色
+export const colorRock = new THREE.Color(defaultColors.colorRock);   // 削られた砂の色
+export const colorBorder = new THREE.Color(defaultColors.colorBorder); // マップ端の境界線
 export const colorWater = 0x3a86ff;                  // 水の色
 
 // --- 地形変形の制限 ---
