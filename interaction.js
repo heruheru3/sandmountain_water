@@ -10,7 +10,8 @@ import {
     configMaxFlowFactor,
     configBrushSharpness,
     configMaxSlope,
-    configWaterOpacity
+    configWaterOpacity,
+    configSourceEmission
 } from './config.js';
 
 export const raycaster = new THREE.Raycaster();
@@ -162,6 +163,8 @@ export function initInteraction() {
     const maxSlopeVal = document.getElementById('maxSlopeVal');
     const waterOpacitySlider = document.getElementById('waterOpacity');
     const waterOpacityVal = document.getElementById('waterOpacityVal');
+    const sourceEmissionSlider = document.getElementById('sourceEmission');
+    const sourceEmissionVal = document.getElementById('sourceEmissionVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -231,6 +234,13 @@ export function initInteraction() {
         // Sync material with loaded state
         terrainModule.waterPlaneMat.opacity = state.waterOpacity;
     }
+    if (sourceEmissionSlider) {
+        sourceEmissionSlider.min = configSourceEmission.min;
+        sourceEmissionSlider.max = configSourceEmission.max;
+        sourceEmissionSlider.step = configSourceEmission.step;
+        sourceEmissionSlider.value = state.sourceEmission;
+        sourceEmissionVal.textContent = state.sourceEmission;
+    }
     if (smoothShadingToggle) {
         smoothShadingToggle.checked = state.useSmoothing;
         // Sync terrain shading
@@ -297,6 +307,13 @@ export function initInteraction() {
         });
     }
 
+    if (sourceEmissionSlider) {
+        sourceEmissionSlider.addEventListener('input', () => {
+            state.setSourceEmission(parseFloat(sourceEmissionSlider.value));
+            sourceEmissionVal.textContent = state.sourceEmission;
+        });
+    }
+
     if (smoothShadingToggle) {
         smoothShadingToggle.addEventListener('change', () => {
             state.setUseSmoothing(smoothShadingToggle.checked);
@@ -331,6 +348,32 @@ export function initInteraction() {
             state.clearWaterSources();
             terrainModule.initTerrain();
             terrainModule.updateWaterMesh();
+        });
+    }
+
+    // Modal logic
+    const settingsModal = document.getElementById('settings-modal');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+    if (openSettingsBtn && settingsModal) {
+        openSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('modal-hidden');
+        });
+    }
+
+    if (closeSettingsBtn && settingsModal) {
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('modal-hidden');
+        });
+    }
+
+    // Close modal when clicking outside content
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.add('modal-hidden');
+            }
         });
     }
 

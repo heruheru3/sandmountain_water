@@ -63,7 +63,7 @@ export function spawnSourceWater() {
         let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
 
         // Generate a unique color for each source
-        const tint = new THREE.Color().setHSL((sIdx * 0.23) % 1.0, 0.6, 0.5);
+        const tint = new THREE.Color().setHSL((0.6 + sIdx * 0.15) % 1.0, 0.8, 0.6);
 
         // Color a 3x3 area to prevent blue edges due to averaging in updateWaterMesh
         for (let dz = -1; dz <= 1; dz++) {
@@ -73,7 +73,7 @@ export function spawnSourceWater() {
                 if (nx > 0 && nx < segments && nz > 0 && nz < segments) {
                     let nIdx = nz * (segments + 1) + nx;
                     if (dx === 0 && dz === 0) {
-                        terrainModule.waterDepths[nIdx] += 0.5;
+                        terrainModule.waterDepths[nIdx] += state.sourceEmission;
                     }
                     // Apply tint to the neighbors too so lifted vertices aren't blue
                     terrainModule.waterColors[nIdx * 4] = tint.r;
@@ -203,7 +203,7 @@ export function updateSimulation(mouse) {
                                         colors[nIdx * 3] = Math.max(colorRock.r, colors[nIdx * 3] - 0.005);
                                         colors[nIdx * 3 + 1] = Math.max(colorRock.g, colors[nIdx * 3 + 1] - 0.005);
                                         colors[nIdx * 3 + 2] = Math.max(colorRock.b, colors[nIdx * 3 + 2] - 0.005);
-                                        
+
                                         // 変化量が少ないときはフラグを立てない
                                         if (Math.abs(oldR - colors[nIdx * 3]) > 0.001 || actualErode > 0.005) {
                                             geometryNeedsUpdate = true;
@@ -237,7 +237,7 @@ export function updateSimulation(mouse) {
                                         let targetR = THREE.MathUtils.lerp(colorGrass.r, colorSand.r, blend);
                                         let targetG = THREE.MathUtils.lerp(colorGrass.g, colorSand.g, blend);
                                         let targetB = THREE.MathUtils.lerp(colorGrass.b, colorSand.b, blend);
-                                        
+
                                         let oldR = colors[nIdx * 3];
                                         colors[nIdx * 3] = Math.min(targetR, colors[nIdx * 3] + 0.01);
                                         colors[nIdx * 3 + 1] = Math.min(targetG, colors[nIdx * 3 + 1] + 0.01);

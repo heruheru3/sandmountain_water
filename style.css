@@ -188,3 +188,59 @@ p {
 .button-row button:active {
     transform: translateY(0);
 }
+
+/* Modal Styles */
+#settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s;
+}
+
+.modal-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#settings-modal.modal-hidden .modal-content {
+    transform: translateY(20px);
+}
+
+.modal-content {
+    background: rgba(15, 15, 25, 0.95);
+    padding: 25px;
+    border-radius: 16px;
+    width: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    transform: translateY(0);
+    transition: transform 0.3s;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+#closeSettingsBtn {
+    background: none;
+    border: none;
+    color: #4facfe;
+    font-size: 1.8rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+#openSettingsBtn {
+    background: linear-gradient(135deg, #1e293b, #334155) !important;
+}

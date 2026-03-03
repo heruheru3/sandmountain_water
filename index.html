@@ -51,6 +51,10 @@
                 <label for="waterOpacity">Water Opacity: <span id="waterOpacityVal">0.7</span></label>
                 <input type="range" id="waterOpacity">
             </div>
+            <div class="slider-row">
+                <label for="sourceEmission">Source Emission: <span id="sourceEmissionVal">0.5</span></label>
+                <input type="range" id="sourceEmission">
+            </div>
             <div class="checkbox-row">
                 <input type="checkbox" id="smoothShading" checked>
                 <label for="smoothShading">Smooth Shading</label>
@@ -59,8 +63,20 @@
                 <button id="globalRainBtn">Global Rain: OFF</button>
                 <button id="randomBtn">Add Random Hills</button>
             </div>
-            <div class="divider"></div>
-            <h3>Color Settings</h3>
+            <div class="button-row">
+                <button id="openSettingsBtn">⚙️ Color Settings</button>
+                <button id="resetBtn">Reset All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Color Settings</h3>
+                <button id="closeSettingsBtn">&times;</button>
+            </div>
             <div class="slider-row">
                 <label>Grass Color</label>
                 <input type="color" id="colorGrassPicker" value="#aaaaaa">
@@ -76,10 +92,6 @@
             <div class="slider-row">
                 <label>Border Color</label>
                 <input type="color" id="colorBorderPicker" value="#444444">
-            </div>
-
-            <div class="button-row">
-                <button id="resetBtn">Reset All</button>
             </div>
         </div>
     </div>
