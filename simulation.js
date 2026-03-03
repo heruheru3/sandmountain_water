@@ -181,7 +181,9 @@ export function updateSimulation(mouse) {
                 let currentSediment = terrainModule.nextSediment[idx];
                 if (currentSediment < sedimentCapacity && slope > 0.05) {
                     let amountToErode = Math.min((sedimentCapacity - currentSediment) * erosionRate, erosionMax);
-                    let erosionFactor = Math.max(0, 1.0 - terrainModule.hardness[idx]);
+                    // Use higher of surface hardness or tree root reinforcement
+                    let effectiveHardness = Math.max(terrainModule.hardness[idx], terrainModule.treeResistance[idx]);
+                    let erosionFactor = Math.max(0, 1.0 - effectiveHardness);
                     amountToErode *= erosionFactor;
                     if (amountToErode > 0.005 && positions[idx * 3 + 1] - amountToErode > bedrockLimit) {
                         const weights = [[0.01, 0.04, 0.01], [0.04, 0.60, 0.04], [0.01, 0.04, 0.01]];
@@ -277,6 +279,14 @@ export function updateSimulation(mouse) {
     terrainModule.updateWaterMesh();
     // Inform GPU that water colors have updated
     terrainModule.waterPlane.geometry.attributes.color.needsUpdate = true;
+
+    // Update tree positions to follow terrain height
+    state.trees.forEach(tree => {
+        if (tree.marker) {
+            const h = positions[tree.idx * 3 + 1];
+            tree.marker.position.y = h;
+        }
+    });
 
     if (geometryNeedsUpdate) {
         terrainModule.slumpTerrain();

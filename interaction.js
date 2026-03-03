@@ -30,10 +30,18 @@ export const cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
 cursorMesh.rotation.x = -Math.PI / 2;
 scene.add(cursorMesh);
 
+let lastPlantPosition = new THREE.Vector3();
+const MIN_PLANT_DISTANCE = 8.0; // Minimum distance between trees when dragging
+
 export function initInteraction() {
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Shift') state.setShiftHeld(true);
         if (e.key === 'r' || e.key === 'R') state.setRaining(true);
+        if (e.key === 't' || e.key === 'T') {
+            const newState = !state.isPlanting;
+            state.setPlanting(newState);
+            updatePlantingUI(newState);
+        }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -51,7 +59,23 @@ export function initInteraction() {
 
     window.addEventListener('pointerdown', (e) => {
         if (e.target.closest('#ui-container')) return;
-        if (e.button === 0) state.setDrawing(true);
+        if (e.target.closest('#settings-modal')) return;
+
+        if (e.button === 0) {
+            if (state.isPlanting) {
+                // Start continuous planting
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(terrainModule.terrain);
+                if (intersects.length > 0) {
+                    terrainModule.plantTree(intersects[0].point);
+                    lastPlantPosition.copy(intersects[0].point);
+                }
+            } else {
+                state.setDrawing(true);
+            }
+        }
         if (e.button === 2) {
             const now = Date.now();
             const isClickSequence = (now - lastRightClickTime < doubleClickThreshold);
@@ -135,6 +159,14 @@ export function initInteraction() {
                     terrainModule.buildMountain(intersects[0].point);
                 }
             }
+
+            if (state.isPlanting && (event.buttons & 1)) {
+                // Check distance from last planted tree
+                if (intersects[0].point.distanceTo(lastPlantPosition) > MIN_PLANT_DISTANCE) {
+                    terrainModule.plantTree(intersects[0].point);
+                    lastPlantPosition.copy(intersects[0].point);
+                }
+            }
         } else {
             cursorMesh.visible = false;
         }
@@ -167,6 +199,7 @@ export function initInteraction() {
     const sourceEmissionVal = document.getElementById('sourceEmissionVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
     const showGridToggle = document.getElementById('showGrid');
+    const plantBtn = document.getElementById('plantBtn');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
 
@@ -354,9 +387,32 @@ export function initInteraction() {
         });
     }
 
+    if (plantBtn) {
+        plantBtn.addEventListener('click', () => {
+            const newState = !state.isPlanting;
+            state.setPlanting(newState);
+            updatePlantingUI(newState);
+        });
+    }
+
+    function updatePlantingUI(newState) {
+        if (!plantBtn) return;
+        if (newState) {
+            plantBtn.classList.add('active');
+            plantBtn.textContent = '🌲 Plant Tree: ON';
+            cursorMesh.material.color.set(0x2e7d32); // Green for planting
+        } else {
+            plantBtn.classList.remove('active');
+            plantBtn.textContent = '🌲 Plant Tree: OFF';
+            cursorMesh.material.color.set(0x4facfe); // Blue for standard
+        }
+    }
+
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             state.clearWaterSources();
+            state.clearTrees();
+            terrainModule.resetTreeResistance();
             terrainModule.initTerrain();
             terrainModule.updateWaterMesh();
         });

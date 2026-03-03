@@ -180,6 +180,11 @@ p {
     box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
 }
 
+#plantBtn.active {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
+}
+
 .button-row button:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);

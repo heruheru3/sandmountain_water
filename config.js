@@ -72,3 +72,6 @@ export const globalRainDensity = 1.0;     // 全体雨の密度係数
 // --- 水源（湧水点）の設定 ---
 export const sourceMarkerHeight = 10.0;  // 地面からアイコンまでの高さ
 export const defaultShowGrid = showGrid;
+// --- 植樹の設定 ---
+export const treeHardness = 1.0;         // 樹木による地盤の硬化具合 (1.0 = 岩盤と同じ)
+export const treeRadius = 5.0;           // 樹木が地盤を固める半径

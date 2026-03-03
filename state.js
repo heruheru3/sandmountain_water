@@ -17,6 +17,8 @@ export let isRightClicking = false;
 export let isShiftHeld = false;
 export let isRaining = false;
 export let isGlobalRaining = false;
+export let isPlanting = false;
+export let trees = []; // [{id, marker, idx}]
 
 // Settings persistence
 export function updateSetting(key, val) {
@@ -43,6 +45,22 @@ export function setRightClicking(val) { isRightClicking = val; }
 export function setShiftHeld(val) { isShiftHeld = val; }
 export function setRaining(val) { isRaining = val; }
 export function setGlobalRaining(val) { isGlobalRaining = val; }
+export function setPlanting(val) { isPlanting = val; }
+
+export function addTree(marker, idx) {
+    const id = Date.now();
+    trees.push({ id, marker, idx });
+    return id;
+}
+
+export function clearTrees() {
+    trees.forEach(t => {
+        if (t.marker && t.marker.parent) {
+            t.marker.parent.remove(t.marker);
+        }
+    });
+    trees = [];
+}
 
 import { colorGrass, colorSand, colorRock, colorBorder } from './config.js';
 

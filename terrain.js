@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness, treeHardness, treeRadius } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -39,6 +39,7 @@ export const waterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const nextWaterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const waterColors = new Float32Array((segments + 1) * (segments + 1) * 4); // RGBA for each vertex
 export const hardness = new Float32Array((segments + 1) * (segments + 1));
+export const treeResistance = new Float32Array((segments + 1) * (segments + 1)); // Permanent reinforcement from trees
 export const sediment = new Float32Array((segments + 1) * (segments + 1));
 export const nextSediment = new Float32Array((segments + 1) * (segments + 1));
 
@@ -241,8 +242,13 @@ export function slumpTerrain(point = null, radius = null) {
                 if (nIdx < 0 || nIdx >= (segments + 1) * (segments + 1)) continue;
                 let nH = positions[nIdx * 3 + 1];
                 let diff = h - nH;
-                if (diff > state.maxSlope) {
-                    let transfer = (diff - state.maxSlope) * slumpRate * 0.5;
+
+                // Use the higher of surface hardness or permanent tree reinforcement (roots)
+                let effectiveHardness = Math.max(hardness[idx], treeResistance[idx]);
+                let effectiveMaxSlope = state.maxSlope * (1.0 + effectiveHardness * 4.0);
+
+                if (diff > effectiveMaxSlope) {
+                    let transfer = (diff - effectiveMaxSlope) * slumpRate * 0.5;
                     positions[idx * 3 + 1] -= transfer;
                     positions[nIdx * 3 + 1] += transfer;
                     h -= transfer;
@@ -374,6 +380,63 @@ export function generateRandomTerrain() {
         state.setBuildStrength(originalStrength);
     }
 }
+// Tree Planting Logic
+export function createTreeMarker(point) {
+    const group = new THREE.Group();
+
+    // Trunk
+    const trunkGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.5, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 0.75;
+    group.add(trunk);
+
+    // Leaves (Cone)
+    const leavesGeo = new THREE.ConeGeometry(1.2, 2.5, 8);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
+    const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+    leaves.position.y = 2.5;
+    group.add(leaves);
+
+    group.position.copy(point);
+    scene.add(group);
+    return group;
+}
+
+export function plantTree(point) {
+    const positions = geometry.attributes.position.array;
+    const radius = treeRadius;
+    let changed = false;
+
+    // Fix ground hardness around the tree
+    for (let i = 0; i < positions.length; i += 3) {
+        const vx = positions[i];
+        const vz = positions[i + 2];
+        const dx = vx - point.x;
+        const dz = vz - point.z;
+        if (dx * dx + dz * dz < radius * radius) {
+            let idx = i / 3;
+            // Record permanent reinforcement that won't be overwritten by sediment
+            treeResistance[idx] = Math.max(treeResistance[idx], treeHardness);
+            // Also update surface hardness for immediate color feedback
+            hardness[idx] = Math.max(hardness[idx], treeHardness);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        updateTerrainColors(point, radius);
+
+        // Find closest grid index for height tracking
+        const gx = Math.round((point.x + terrainWidth / 2) / terrainWidth * segments);
+        const gz = Math.round((point.z + terrainDepth / 2) / terrainDepth * segments);
+        const treeIdx = gz * (segments + 1) + gx;
+
+        const marker = createTreeMarker(point);
+        state.addTree(marker, treeIdx);
+    }
+}
+
 export function createSourceMarker(point) {
     const group = new THREE.Group();
 
@@ -408,4 +471,8 @@ export function createSourceMarker(point) {
     group.position.copy(point);
     scene.add(group);
     return group;
+}
+
+export function resetTreeResistance() {
+    treeResistance.fill(0);
 }
