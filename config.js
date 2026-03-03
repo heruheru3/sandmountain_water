@@ -71,3 +71,4 @@ export const globalRainDropAmount = 0.03;  // 全体雨の1滴あたりの水量
 export const globalRainDensity = 1.0;     // 全体雨の密度係数
 // --- 水源（湧水点）の設定 ---
 export const sourceMarkerHeight = 10.0;  // 地面からアイコンまでの高さ
+export const defaultShowGrid = showGrid;

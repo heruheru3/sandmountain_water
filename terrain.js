@@ -21,6 +21,20 @@ terrain.receiveShadow = true;
 terrain.castShadow = true;
 scene.add(terrain);
 
+// Wireframe mesh that follows terrain height
+export const wireframeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x444444,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.3,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1
+});
+export const wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
+wireframeMesh.visible = state.showGrid;
+scene.add(wireframeMesh);
+
 export const waterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const nextWaterDepths = new Float32Array((segments + 1) * (segments + 1));
 export const waterColors = new Float32Array((segments + 1) * (segments + 1) * 4); // RGBA for each vertex
@@ -193,7 +207,7 @@ export function updateWaterMesh() {
             // Calculate display alpha (Simulated prop * depth-fade)
             // Global opacity is handled at the Material level (this.opacity)
             // Use ease-in fading for smoother visual disappearance before z-fighting starts
-            dAlphas[i] = waterColors[i * 4 + 3] * (fade * fade); 
+            dAlphas[i] = waterColors[i * 4 + 3] * (fade * fade);
         } else {
             wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0; // Hide well below terrain
             dAlphas[i] = 0;

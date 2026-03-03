@@ -1,4 +1,4 @@
-import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity, defaultSourceEmission } from './config.js';
+import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity, defaultSourceEmission, defaultShowGrid } from './config.js';
 
 export let brushRadius = defaultBrushRadius;
 export let buildStrength = defaultBuildStrength;
@@ -10,6 +10,7 @@ export let brushSharpness = defaultBrushSharpness;
 export let maxSlope = defaultMaxSlope;
 export let waterOpacity = defaultWaterOpacity;
 export let sourceEmission = defaultSourceEmission;
+export let showGrid = defaultShowGrid;
 
 export let isDrawing = false;
 export let isRightClicking = false;
@@ -35,6 +36,7 @@ export function setBrushSharpness(val) { brushSharpness = val; updateSetting('br
 export function setMaxSlope(val) { maxSlope = val; updateSetting('maxSlope', val); }
 export function setWaterOpacity(val) { waterOpacity = val; updateSetting('waterOpacity', val); }
 export function setSourceEmission(val) { sourceEmission = val; updateSetting('sourceEmission', val); }
+export function setShowGrid(val) { showGrid = val; updateSetting('showGrid', val); }
 
 export function setDrawing(val) { isDrawing = val; }
 export function setRightClicking(val) { isRightClicking = val; }
@@ -79,6 +81,7 @@ export function loadSavedSettings() {
         if (settings.maxSlope !== undefined) maxSlope = settings.maxSlope;
         if (settings.waterOpacity !== undefined) waterOpacity = settings.waterOpacity;
         if (settings.sourceEmission !== undefined) sourceEmission = settings.sourceEmission;
+        if (settings.showGrid !== undefined) showGrid = settings.showGrid;
     }
 }
 

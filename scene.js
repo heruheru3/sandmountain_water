@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { terrainWidth, segments, showGrid, defaultLightIntensity } from './config.js';
+import { terrainWidth, segments, domeHeight, defaultLightIntensity } from './config.js';
+import * as state from './state.js';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
@@ -36,14 +37,7 @@ dirLight.position.set(terrainWidth * 0.5, 100, terrainWidth * 0.5);
 dirLight.castShadow = true;
 scene.add(dirLight);
 
-// Add a helper grid
-if (showGrid) {
-    const gridHelper = new THREE.GridHelper(terrainWidth, segments, 0x4facfe, 0xffffff);
-    gridHelper.material.opacity = 0.1;
-    gridHelper.material.transparent = true;
-    gridHelper.position.y = 0.01;
-    scene.add(gridHelper);
-}
+// Grid helper removed - handled by terrain wireframe mesh in terrain.js
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

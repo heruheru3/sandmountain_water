@@ -166,6 +166,7 @@ export function initInteraction() {
     const sourceEmissionSlider = document.getElementById('sourceEmission');
     const sourceEmissionVal = document.getElementById('sourceEmissionVal');
     const smoothShadingToggle = document.getElementById('smoothShading');
+    const showGridToggle = document.getElementById('showGrid');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
 
@@ -247,6 +248,9 @@ export function initInteraction() {
         terrainModule.material.flatShading = !state.useSmoothing;
         terrainModule.material.needsUpdate = true;
     }
+    if (showGridToggle) {
+        showGridToggle.checked = state.showGrid;
+    }
 
     if (rainRadiusSlider) {
         rainRadiusSlider.addEventListener('input', () => {
@@ -319,6 +323,13 @@ export function initInteraction() {
             state.setUseSmoothing(smoothShadingToggle.checked);
             terrainModule.material.flatShading = !state.useSmoothing;
             terrainModule.material.needsUpdate = true;
+        });
+    }
+
+    if (showGridToggle) {
+        showGridToggle.addEventListener('change', () => {
+            state.setShowGrid(showGridToggle.checked);
+            terrainModule.wireframeMesh.visible = state.showGrid;
         });
     }
 
