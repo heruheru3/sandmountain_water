@@ -11,7 +11,10 @@ import {
     configBrushSharpness,
     configMaxSlope,
     configWaterOpacity,
-    configSourceEmission
+    configSourceEmission,
+    terrainWidth,
+    terrainDepth,
+    segments
 } from './config.js';
 
 export const raycaster = new THREE.Raycaster();
@@ -40,7 +43,20 @@ export function initInteraction() {
         if (e.key === 't' || e.key === 'T') {
             const newState = !state.isPlanting;
             state.setPlanting(newState);
+            if (newState) {
+                state.setBuildingHouse(false);
+                updateHouseUI(false);
+            }
             updatePlantingUI(newState);
+        }
+        if (e.key === 'h' || e.key === 'H') {
+            const newState = !state.isBuildingHouse;
+            state.setBuildingHouse(newState);
+            if (newState) {
+                state.setPlanting(false);
+                updatePlantingUI(false);
+            }
+            updateHouseUI(newState);
         }
     });
 
@@ -63,7 +79,7 @@ export function initInteraction() {
 
         if (e.button === 0) {
             if (state.isPlanting) {
-                // Start continuous planting
+                // Planting a tree
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                 raycaster.setFromCamera(mouse, camera);
@@ -71,6 +87,15 @@ export function initInteraction() {
                 if (intersects.length > 0) {
                     terrainModule.plantTree(intersects[0].point);
                     lastPlantPosition.copy(intersects[0].point);
+                }
+            } else if (state.isBuildingHouse) {
+                // Building a house
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(terrainModule.terrain);
+                if (intersects.length > 0) {
+                    terrainModule.buildHouse(intersects[0].point);
                 }
             } else {
                 state.setDrawing(true);
@@ -126,7 +151,12 @@ export function initInteraction() {
         if (intersects.length > 0) {
             const p = intersects[0].point;
             const marker = terrainModule.createSourceMarker(p);
-            state.addWaterSource(p.x, p.z, marker);
+
+            const gx = Math.round((p.x + terrainWidth / 2) / terrainWidth * segments);
+            const gz = Math.round((p.z + terrainDepth / 2) / terrainDepth * segments);
+            const idx = gz * (segments + 1) + gx;
+
+            state.addWaterSource(p.x, p.z, marker, idx);
         }
     }
 
@@ -200,6 +230,7 @@ export function initInteraction() {
     const smoothShadingToggle = document.getElementById('smoothShading');
     const showGridToggle = document.getElementById('showGrid');
     const plantBtn = document.getElementById('plantBtn');
+    const houseBtn = document.getElementById('houseBtn');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
 
@@ -391,7 +422,23 @@ export function initInteraction() {
         plantBtn.addEventListener('click', () => {
             const newState = !state.isPlanting;
             state.setPlanting(newState);
+            if (newState) {
+                state.setBuildingHouse(false);
+                updateHouseUI(false);
+            }
             updatePlantingUI(newState);
+        });
+    }
+
+    if (houseBtn) {
+        houseBtn.addEventListener('click', () => {
+            const newState = !state.isBuildingHouse;
+            state.setBuildingHouse(newState);
+            if (newState) {
+                state.setPlanting(false);
+                updatePlantingUI(false);
+            }
+            updateHouseUI(newState);
         });
     }
 
@@ -404,7 +451,22 @@ export function initInteraction() {
         } else {
             plantBtn.classList.remove('active');
             plantBtn.textContent = '🌲 Plant Tree: OFF';
-            cursorMesh.material.color.set(0x4facfe); // Blue for standard
+            // If house is not on, revert to blue
+            if (!state.isBuildingHouse) cursorMesh.material.color.set(0x4facfe);
+        }
+    }
+
+    function updateHouseUI(newState) {
+        if (!houseBtn) return;
+        if (newState) {
+            houseBtn.classList.add('active');
+            houseBtn.textContent = '🏠 Build House: ON';
+            cursorMesh.material.color.set(0xffa500); // Orange for house
+        } else {
+            houseBtn.classList.remove('active');
+            houseBtn.textContent = '🏠 Build House: OFF';
+            // If tree is not on, revert to blue
+            if (!state.isPlanting) cursorMesh.material.color.set(0x4facfe);
         }
     }
 
@@ -412,6 +474,7 @@ export function initInteraction() {
         resetBtn.addEventListener('click', () => {
             state.clearWaterSources();
             state.clearTrees();
+            state.clearHouses();
             terrainModule.resetTreeResistance();
             terrainModule.initTerrain();
             terrainModule.updateWaterMesh();

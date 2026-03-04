@@ -288,6 +288,20 @@ export function updateSimulation(mouse) {
         }
     });
 
+    state.houses.forEach(house => {
+        if (house.marker) {
+            const h = positions[house.idx * 3 + 1];
+            house.marker.position.y = h;
+        }
+    });
+
+    state.waterSources.forEach(source => {
+        if (source.marker) {
+            const h = positions[source.idx * 3 + 1];
+            source.marker.position.y = h;
+        }
+    });
+
     if (geometryNeedsUpdate) {
         terrainModule.slumpTerrain();
         terrainModule.geometry.attributes.position.needsUpdate = true;

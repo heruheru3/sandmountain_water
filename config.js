@@ -75,3 +75,6 @@ export const defaultShowGrid = showGrid;
 // --- 植樹の設定 ---
 export const treeHardness = 1.0;         // 樹木による地盤の硬化具合 (1.0 = 岩盤と同じ)
 export const treeRadius = 5.0;           // 樹木が地盤を固める半径
+// --- 建物の設定 ---
+export const houseHardness = 1.0;        // 建物による地盤の硬化具合
+export const houseRadius = 8.0;          // 建物が地盤を固める半径

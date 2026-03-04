@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness, treeHardness, treeRadius } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness, treeHardness, treeRadius, houseHardness, houseRadius } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -124,6 +124,12 @@ export function updateTerrainColors(point = null, radius = null) {
                 let targetColor;
                 if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
                     targetColor = colorBorder;
+                } else if (treeResistance[i] > 1.5) {
+                    // House (Fixed gray)
+                    targetColor = colorRock;
+                } else if (treeResistance[i] > 0.5) {
+                    // Tree (Fixed green)
+                    targetColor = colorGrass;
                 } else {
                     if (hardness[i] < 0.2) {
                         targetColor = colorRock;
@@ -148,6 +154,10 @@ export function updateTerrainColors(point = null, radius = null) {
             let targetColor;
             if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
                 targetColor = colorBorder;
+            } else if (treeResistance[i] > 1.5) {
+                targetColor = colorRock;
+            } else if (treeResistance[i] > 0.5) {
+                targetColor = colorGrass;
             } else {
                 if (hardness[i] < 0.2) {
                     targetColor = colorRock;
@@ -416,10 +426,9 @@ export function plantTree(point) {
         const dz = vz - point.z;
         if (dx * dx + dz * dz < radius * radius) {
             let idx = i / 3;
-            // Record permanent reinforcement that won't be overwritten by sediment
-            treeResistance[idx] = Math.max(treeResistance[idx], treeHardness);
-            // Also update surface hardness for immediate color feedback
-            hardness[idx] = Math.max(hardness[idx], treeHardness);
+            // Record as Tree (1.0)
+            treeResistance[idx] = 1.0;
+            hardness[idx] = 1.0;
             changed = true;
         }
     }
@@ -434,6 +443,59 @@ export function plantTree(point) {
 
         const marker = createTreeMarker(point);
         state.addTree(marker, treeIdx);
+    }
+}
+
+// House Building Logic
+export function createHouseMarker(point) {
+    const group = new THREE.Group();
+
+    // Box (Main body)
+    const boxGeo = new THREE.BoxGeometry(3, 2, 4);
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0 });
+    const box = new THREE.Mesh(boxGeo, boxMat);
+    box.position.y = 1;
+    group.add(box);
+
+    // Roof (Prism-like)
+    const roofGeo = new THREE.ConeGeometry(3.5, 2, 4);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b0000 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.y = 3;
+    roof.rotation.y = Math.PI / 4;
+    group.add(roof);
+
+    group.position.copy(point);
+    scene.add(group);
+    return group;
+}
+
+export function buildHouse(point) {
+    const positions = geometry.attributes.position.array;
+    const radius = houseRadius;
+    let changed = false;
+
+    for (let i = 0; i < positions.length; i += 3) {
+        const vx = positions[i];
+        const vz = positions[i + 2];
+        const dx = vx - point.x;
+        const dz = vz - point.z;
+        if (dx * dx + dz * dz < radius * radius) {
+            let idx = i / 3;
+            // Record as House (2.0)
+            treeResistance[idx] = 2.0;
+            hardness[idx] = 1.0;
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        updateTerrainColors(point, radius);
+        const gx = Math.round((point.x + terrainWidth / 2) / terrainWidth * segments);
+        const gz = Math.round((point.z + terrainDepth / 2) / terrainDepth * segments);
+        const houseIdx = gz * (segments + 1) + gx;
+        const marker = createHouseMarker(point);
+        state.addHouse(marker, houseIdx);
     }
 }
 

@@ -18,7 +18,9 @@ export let isShiftHeld = false;
 export let isRaining = false;
 export let isGlobalRaining = false;
 export let isPlanting = false;
+export let isBuildingHouse = false;
 export let trees = []; // [{id, marker, idx}]
+export let houses = []; // [{id, marker, idx}]
 
 // Settings persistence
 export function updateSetting(key, val) {
@@ -46,10 +48,17 @@ export function setShiftHeld(val) { isShiftHeld = val; }
 export function setRaining(val) { isRaining = val; }
 export function setGlobalRaining(val) { isGlobalRaining = val; }
 export function setPlanting(val) { isPlanting = val; }
+export function setBuildingHouse(val) { isBuildingHouse = val; }
 
 export function addTree(marker, idx) {
     const id = Date.now();
     trees.push({ id, marker, idx });
+    return id;
+}
+
+export function addHouse(marker, idx) {
+    const id = Date.now();
+    houses.push({ id, marker, idx });
     return id;
 }
 
@@ -60,6 +69,15 @@ export function clearTrees() {
         }
     });
     trees = [];
+}
+
+export function clearHouses() {
+    houses.forEach(h => {
+        if (h.marker && h.marker.parent) {
+            h.marker.parent.remove(h.marker);
+        }
+    });
+    houses = [];
 }
 
 import { colorGrass, colorSand, colorRock, colorBorder } from './config.js';
@@ -103,11 +121,11 @@ export function loadSavedSettings() {
     }
 }
 
-export let waterSources = []; // [{id, x, z, marker}]
+export let waterSources = []; // [{id, x, z, marker, idx}]
 
-export function addWaterSource(x, z, marker) {
+export function addWaterSource(x, z, marker, idx) {
     const id = Date.now();
-    waterSources.push({ id, x, z, marker });
+    waterSources.push({ id, x, z, marker, idx });
     return id;
 }
 

@@ -185,6 +185,11 @@ p {
     box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
 }
 
+#houseBtn.active {
+    background: linear-gradient(135deg, #ff9f43, #f39c12);
+    box-shadow: 0 0 15px rgba(255, 159, 67, 0.5);
+}
+
 .button-row button:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
