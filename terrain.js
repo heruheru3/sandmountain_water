@@ -594,13 +594,27 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
         // Shift entire terrain up so minimum point is at bedrockLimit
         const h = (rawH - minH) * scale;
 
-        // --- Sea/Water Handling ---
-        // GSI dem_png uses 0 for sea level/no data.
-        // If we detect it's basically 0 (sea level), we lower the bottom to create a basin and fill with water.
-        if (rawH <= 0.01) {
-            const basinDepth = 1.7; // Lower terrain by 2m for sea areas
+        // --- Sea/Lake/Water Handling ---
+        // GSI dem_png uses 0 for sea level. Lakes/Rivers have elevation but are perfectly flat.
+        let isWater = rawH <= 0.01;
+        if (!isWater) {
+            const x = i % (segments + 1);
+            const z = Math.floor(i / (segments + 1));
+            if (x > 0 && x < segments && z > 0 && z < segments) {
+                // Check if neighbors have the same exact elevation (typical for lake data)
+                let flatNeighbors = 0;
+                const neighborOffsets = [-1, 1, -(segments + 1), (segments + 1)];
+                for (const offset of neighborOffsets) {
+                    if (Math.abs(rawH - heights[i + offset]) < 0.0001) flatNeighbors++;
+                }
+                if (flatNeighbors >= 3) isWater = true;
+            }
+        }
+
+        if (isWater) {
+            const basinDepth = 1.7; // Create a basin
             positions[i * 3 + 1] = h + bedrockLimit - basinDepth;
-            waterDepths[i] = 1.5;   // Pre-fill with 1.5m of water
+            waterDepths[i] = 1.5;   // Pre-fill with water
         } else {
             positions[i * 3 + 1] = h + bedrockLimit;
             waterDepths[i] = 0;
