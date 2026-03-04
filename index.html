@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Erosion Simulation</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 </head>
 
 <body>
@@ -74,6 +80,9 @@
                 <button id="houseBtn">🏠 Build House: OFF</button>
             </div>
             <div class="button-row">
+                <button id="importTerrainBtn">🗺️ Import Real Terrain</button>
+            </div>
+            <div class="button-row">
                 <button id="openSettingsBtn">⚙️ Color Settings</button>
                 <button id="resetBtn">Reset All</button>
             </div>
@@ -81,7 +90,7 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-hidden">
+    <div id="settings-modal" class="modal-overlay modal-hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Color Settings</h3>
@@ -113,6 +122,45 @@
             }
         }
     </script>
+
+    <!-- Map Selection Modal -->
+    <div id="map-modal" class="modal-overlay modal-hidden">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>Import Real Terrain (Japan)</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select a 1km x 1km area to import. (GSI Maps elevation data)</p>
+                <div id="map-container" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                <div class="modal-info">
+                    <span id="coord-display">Lat: ---, Lng: ---</span>
+                    <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                        <label for="targetHeightRange"
+                            style="color: #94a3b8; font-size: 0.85rem; white-space: nowrap;">Target Height
+                            Range:</label>
+                        <input type="range" id="targetHeightRange" value="100" min="1" max="300" step="1"
+                            style="flex: 1;">
+                        <span id="targetHeightRangeVal"
+                            style="color: #60a5fa; font-size: 0.85rem; width: 30px; text-align: right;">100</span>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                        <label for="importHardness"
+                            style="color: #94a3b8; font-size: 0.85rem; white-space: nowrap;">Terrain Hardness:</label>
+                        <input type="range" id="importHardness" value="1.0" min="0.0" max="1.0" step="0.05"
+                            style="flex: 1;">
+                        <span id="importHardnessVal"
+                            style="color: #60a5fa; font-size: 0.85rem; width: 30px; text-align: right;">1.0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelImportBtn">Cancel</button>
+                <button id="confirmImportBtn" class="primary">Import Area</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="main.js"></script>
 </body>
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness, treeHardness, treeRadius, houseHardness, houseRadius } from './config.js';
+import { terrainWidth, terrainDepth, segments, colorGrass, colorSand, colorRock, colorBorder, domeHeight, bedrockLimit, maxHeight, slumpRate, randomHillCountMin, randomHillCountMax, randomHillRadiusMin, randomHillRadiusMax, randomHillStrengthMin, randomHillStrengthMax, sourceMarkerHeight, defaultWaterOpacity, defaultWaterRoughness, defaultWaterMetalness, treeHardness, treeRadius, houseHardness, houseRadius, defaultHeightRange } from './config.js';
 import * as state from './state.js';
 import { scene } from './scene.js';
 
@@ -188,6 +188,9 @@ export function initTerrain() {
         const domeOffset = domeHeight * (1 - (dist / maxDist) ** 2);
         positions[i * 3 + 1] = domeOffset + bedrockLimit;
 
+        // Ensure even the lowest point is at least bedrockLimit
+        if (positions[i * 3 + 1] < bedrockLimit) positions[i * 3 + 1] = bedrockLimit;
+
         hardness[i] = 1.0;
         waterDepths[i] = 0;
         sediment[i] = 0;
@@ -206,19 +209,16 @@ export function updateWaterMesh() {
     for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
         const depth = waterDepths[i];
 
-        // Fading logic: If depth is less than 0.1, it starts fading smoothly.
-        // Also ensure depth has to be greater than a slightly higher threshold to display.
-        const fadeThreshold = 0.1;
+        // Fading logic: If depth is less than fadeThreshold, it starts fading smoothly.
+        const fadeThreshold = 0.05;
         const fade = Math.min(1.0, depth / fadeThreshold);
 
-        if (depth > 0.005) { // Increased minimum visible depth threshold
-            // Increased the physical offset slightly to prevent z-fighting on steep slopes
-            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.05;
+        if (depth > 0.001) {
+            // Increase physical offset slightly to prevent z-fighting on steep slopes
+            wPos[i * 3 + 1] = tPos[i * 3 + 1] + depth + 0.1;
 
-            // Calculate display alpha (Simulated prop * depth-fade)
-            // Global opacity is handled at the Material level (this.opacity)
-            // Use ease-in fading for smoother visual disappearance before z-fighting starts
-            dAlphas[i] = waterColors[i * 4 + 3] * (fade * fade);
+            // Use linear fading for better visibility of thin water
+            dAlphas[i] = waterColors[i * 4 + 3] * fade;
         } else {
             wPos[i * 3 + 1] = tPos[i * 3 + 1] - 10.0; // Hide well below terrain
             dAlphas[i] = 0;
@@ -533,6 +533,44 @@ export function createSourceMarker(point) {
     group.position.copy(point);
     scene.add(group);
     return group;
+}
+
+export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0) {
+    const positions = geometry.attributes.position.array;
+
+    // Find min and max height to normalize
+    let minH = Infinity;
+    let maxH = -Infinity;
+    for (let h of heights) {
+        if (h < minH) minH = h;
+        if (h > maxH) maxH = h;
+    }
+
+    const currentRange = maxH - minH;
+    // Scale factor to make (max - min) equal to targetRange
+    const scale = currentRange > 0 ? targetRange / currentRange : 1.0;
+
+    for (let i = 0; i < heights.length; i++) {
+        // Shift entire terrain up so minimum point is at bedrockLimit
+        // This prevents flattening of the bottom terrain which causes water leaks
+        const h = (heights[i] - minH) * scale;
+        positions[i * 3 + 1] = h + bedrockLimit;
+
+        // Reset sub-systems for the new terrain
+        hardness[i] = initialHardness;
+        waterDepths[i] = 0;
+        sediment[i] = 0;
+        treeResistance[i] = 0;
+    }
+
+    // Clear structures
+    state.clearTrees();
+    state.clearHouses();
+    state.clearWaterSources();
+
+    geometry.attributes.position.needsUpdate = true;
+    updateTerrainColors();
+    geometry.computeVertexNormals();
 }
 
 export function resetTreeResistance() {

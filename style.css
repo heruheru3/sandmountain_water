@@ -200,7 +200,7 @@ p {
 }
 
 /* Modal Styles */
-#settings-modal {
+.modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -218,10 +218,7 @@ p {
 .modal-hidden {
     opacity: 0;
     pointer-events: none;
-}
-
-#settings-modal.modal-hidden .modal-content {
-    transform: translateY(20px);
+    display: none !important;
 }
 
 .modal-content {
@@ -235,20 +232,80 @@ p {
     transition: transform 0.3s;
 }
 
+.modal-content.large {
+    width: 600px;
+    max-width: 90vw;
+}
+
+.modal-overlay.modal-hidden .modal-content {
+    transform: translateY(20px);
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 15px;
 }
 
-#closeSettingsBtn {
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #4facfe;
+}
+
+.close-modal {
     background: none;
     border: none;
     color: #4facfe;
     font-size: 1.8rem;
     cursor: pointer;
     line-height: 1;
+}
+
+.modal-body p {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.modal-info {
+    margin-top: 10px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #00c6ff;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-footer button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#cancelImportBtn {
+    background: #334155;
+    color: white;
+}
+
+#confirmImportBtn {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: white;
+}
+
+#confirmImportBtn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 15px rgba(0, 198, 255, 0.4);
 }
 
 #openSettingsBtn {

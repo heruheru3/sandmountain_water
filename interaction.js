@@ -14,8 +14,10 @@ import {
     configSourceEmission,
     terrainWidth,
     terrainDepth,
-    segments
+    segments,
+    defaultHeightRange
 } from './config.js';
+import { fetchGSITerrainInBounds } from './gsiTerrain.js';
 
 export const raycaster = new THREE.Raycaster();
 export const mouse = new THREE.Vector2();
@@ -75,7 +77,7 @@ export function initInteraction() {
 
     window.addEventListener('pointerdown', (e) => {
         if (e.target.closest('#ui-container')) return;
-        if (e.target.closest('#settings-modal')) return;
+        if (e.target.closest('.modal-overlay:not(.modal-hidden)')) return;
 
         if (e.button === 0) {
             if (state.isPlanting) {
@@ -161,7 +163,7 @@ export function initInteraction() {
     }
 
     window.addEventListener('pointerup', (e) => {
-        if (e.target.closest('#ui-container')) return;
+        // Always reset mouse-down states on pointerup for safety
         if (e.button === 0) state.setDrawing(false);
         if (e.button === 2) {
             state.setRightClicking(false);
@@ -169,10 +171,12 @@ export function initInteraction() {
         }
     });
 
-    window.addEventListener('pointermove', (event) => {
-        if (event.target.closest('#ui-container')) return;
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    window.addEventListener('pointermove', (e) => {
+        if (e.target.closest('#ui-container')) return;
+        if (e.target.closest('.modal-overlay:not(.modal-hidden)')) return;
+
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObject(terrainModule.terrain);
@@ -190,7 +194,7 @@ export function initInteraction() {
                 }
             }
 
-            if (state.isPlanting && (event.buttons & 1)) {
+            if (state.isPlanting && (e.buttons & 1)) {
                 // Check distance from last planted tree
                 if (intersects[0].point.distanceTo(lastPlantPosition) > MIN_PLANT_DISTANCE) {
                     terrainModule.plantTree(intersects[0].point);
@@ -231,6 +235,7 @@ export function initInteraction() {
     const showGridToggle = document.getElementById('showGrid');
     const plantBtn = document.getElementById('plantBtn');
     const houseBtn = document.getElementById('houseBtn');
+    const importTerrainBtn = document.getElementById('importTerrainBtn');
     const randomBtn = document.getElementById('randomBtn');
     const resetBtn = document.getElementById('resetBtn');
 
@@ -481,20 +486,207 @@ export function initInteraction() {
         });
     }
 
-    // Modal logic
+    // --- Map Modal Logic ---
+    const mapModal = document.getElementById('map-modal');
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+    const cancelImportBtn = document.getElementById('cancelImportBtn');
+    const closeMapModal = mapModal.querySelector('.close-modal');
+    const coordDisplay = document.getElementById('coord-display');
+    let map = null;
+    let mapMarker = null;
+
+    if (importTerrainBtn) {
+        importTerrainBtn.addEventListener('click', () => {
+            // Stop any active terrain interactions
+            state.setDrawing(false);
+            state.setRightClicking(false);
+            state.setPlanting(false);
+            state.setBuildingHouse(false);
+            updatePlantingUI(false);
+            updateHouseUI(false);
+
+            const heightInput = document.getElementById('targetHeightRange');
+            const heightVal = document.getElementById('targetHeightRangeVal');
+            if (heightInput) {
+                heightInput.value = defaultHeightRange;
+                if (heightVal) heightVal.textContent = defaultHeightRange;
+            }
+
+            mapModal.style.display = 'flex';
+            mapModal.classList.remove('modal-hidden');
+            initMap();
+        });
+    }
+
+    function hideMapModal() {
+        hideModal(mapModal);
+    }
+
+    function hideModal(modal) {
+        modal.classList.add('modal-hidden');
+
+        // Safety reset for all interaction states
+        state.setDrawing(false);
+        state.setRightClicking(false);
+        state.setRaining(false);
+
+        setTimeout(() => {
+            if (modal.classList.contains('modal-hidden')) {
+                modal.style.display = 'none';
+            }
+        }, 300); // Wait for transition
+    }
+
+    cancelImportBtn.addEventListener('click', hideMapModal);
+    closeMapModal.addEventListener('click', hideMapModal);
+
+    function initMap() {
+        if (map) return;
+        // Mount Fuji center
+        const startPos = [35.3606, 138.7274];
+        map = L.map('map-container').setView(startPos, 14);
+        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+            attribution: '&copy; Geospatial Information Authority of Japan'
+        }).addTo(map);
+
+        // Selection rectangle (roughly 2km x 2km to match Z14 tile)
+        const rectSize = 0.02; // Approx 2.2km in lat degree
+        const bounds = [
+            [startPos[0] - rectSize / 2, startPos[1] - rectSize / 2],
+            [startPos[0] + rectSize / 2, startPos[1] + rectSize / 2]
+        ];
+        mapMarker = L.rectangle(bounds, { color: "#ff7800", weight: 2, fillOpacity: 0.2 }).addTo(map);
+
+        // Enable resizing and dragging via Geoman
+        mapMarker.pm.enable({
+            draggable: true,
+            snappable: false
+        });
+
+        const updateCoords = () => {
+            const center = mapMarker.getBounds().getCenter();
+            coordDisplay.textContent = `Lat: ${center.lat.toFixed(4)}, Lng: ${center.lng.toFixed(4)}`;
+        };
+
+        // Initial coordinate display
+        updateCoords();
+
+        // Update marker position when map moves, but only if not being explicitly dragged/edited
+        let isInteractingWithMarker = false;
+        mapMarker.on('pm:dragstart pm:markerdragstart', () => { isInteractingWithMarker = true; });
+
+        const forceSquare = () => {
+            const bounds = mapMarker.getBounds();
+            const center = bounds.getCenter();
+            const latDelta = Math.abs(bounds.getNorth() - bounds.getSouth());
+            const lngDelta = Math.abs(bounds.getEast() - bounds.getWest());
+            const size = Math.max(latDelta, lngDelta);
+
+            const newBounds = [
+                [center.lat - size / 2, center.lng - size / 2],
+                [center.lat + size / 2, center.lng + size / 2]
+            ];
+            mapMarker.setBounds(newBounds);
+            updateCoords();
+        };
+
+        mapMarker.on('pm:edit', forceSquare);
+
+        mapMarker.on('pm:dragend pm:markerdragend pm:edit', () => {
+            isInteractingWithMarker = false;
+            updateCoords();
+        });
+
+        map.on('movestart', () => {
+            // Hide handles while panning to avoid lag/drift
+            if (!isInteractingWithMarker) mapMarker.pm.disable();
+        });
+
+        map.on('move', () => {
+            if (isInteractingWithMarker) return;
+
+            const center = map.getCenter();
+            const currentBounds = mapMarker.getBounds();
+            const latHalf = (currentBounds.getNorth() - currentBounds.getSouth()) / 2;
+            const lngHalf = (currentBounds.getEast() - currentBounds.getWest()) / 2;
+
+            const b = [
+                [center.lat - latHalf, center.lng - lngHalf],
+                [center.lat + latHalf, center.lng + lngHalf]
+            ];
+            mapMarker.setBounds(b);
+            updateCoords();
+        });
+
+        map.on('moveend', () => {
+            // Show handles again once the map stops
+            if (!isInteractingWithMarker) {
+                mapMarker.pm.enable({
+                    draggable: true,
+                    snappable: false
+                });
+            }
+        });
+
+        // Add a global safety reset for the flag
+        window.addEventListener('mouseup', () => {
+            setTimeout(() => { isInteractingWithMarker = false; }, 100);
+        });
+    }
+
+    confirmImportBtn.addEventListener('click', async () => {
+        const bounds = mapMarker.getBounds();
+        const targetRange = parseFloat(document.getElementById('targetHeightRange').value) || defaultHeightRange;
+        const initialHardness = parseFloat(document.getElementById('importHardness').value) || 1.0;
+
+        confirmImportBtn.disabled = true;
+        confirmImportBtn.textContent = "Fetching...";
+
+        try {
+            // Fetch terrain precisely within selection bounds (Auto-zoom)
+            const preciseHeights = await fetchGSITerrainInBounds(bounds, segments);
+            terrainModule.setHeightData(preciseHeights, targetRange, initialHardness);
+            hideMapModal();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to import terrain data.");
+        } finally {
+            confirmImportBtn.disabled = false;
+            confirmImportBtn.textContent = "Import Area";
+        }
+    });
+
+    const targetHeightRange = document.getElementById('targetHeightRange');
+    const targetHeightRangeVal = document.getElementById('targetHeightRangeVal');
+    if (targetHeightRange && targetHeightRangeVal) {
+        targetHeightRange.addEventListener('input', (e) => {
+            targetHeightRangeVal.textContent = e.target.value;
+        });
+    }
+
+    const importHardness = document.getElementById('importHardness');
+    const importHardnessVal = document.getElementById('importHardnessVal');
+    if (importHardness && importHardnessVal) {
+        importHardness.addEventListener('input', (e) => {
+            importHardnessVal.textContent = e.target.value;
+        });
+    }
+
+    // --- Settings Modal Logic ---
     const settingsModal = document.getElementById('settings-modal');
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 
     if (openSettingsBtn && settingsModal) {
         openSettingsBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'flex';
             settingsModal.classList.remove('modal-hidden');
         });
     }
 
     if (closeSettingsBtn && settingsModal) {
         closeSettingsBtn.addEventListener('click', () => {
-            settingsModal.classList.add('modal-hidden');
+            hideModal(settingsModal);
         });
     }
 
@@ -502,7 +694,7 @@ export function initInteraction() {
     if (settingsModal) {
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
-                settingsModal.classList.add('modal-hidden');
+                hideModal(settingsModal);
             }
         });
     }
