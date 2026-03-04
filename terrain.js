@@ -572,8 +572,13 @@ export function createSourceMarker(point, color = null) {
     return group;
 }
 
-export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0, naturalScale = 0.1) {
+export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0, naturalScale = 0.1, forestData = null) {
     const positions = geometry.attributes.position.array;
+
+    // Clear structures first to avoid double-processing
+    state.clearTrees();
+    state.clearHouses();
+    state.clearWaterSources();
 
     // Find min and max height to normalize
     let minH = Infinity;
@@ -590,6 +595,8 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
 
     for (let i = 0; i < heights.length; i++) {
         const rawH = heights[i];
+        const xIdx = i % (segments + 1);
+        const zIdx = Math.floor(i / (segments + 1));
 
         // Shift entire terrain up so minimum point is at bedrockLimit
         const h = (rawH - minH) * scale;
@@ -598,9 +605,7 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
         // GSI dem_png uses 0 for sea level. Lakes/Rivers have elevation but are perfectly flat.
         let isWater = rawH <= 0.01;
         if (!isWater) {
-            const x = i % (segments + 1);
-            const z = Math.floor(i / (segments + 1));
-            if (x > 0 && x < segments && z > 0 && z < segments) {
+            if (xIdx > 0 && xIdx < segments && zIdx > 0 && zIdx < segments) {
                 // Check if neighbors have the same exact elevation (typical for lake data)
                 let flatNeighbors = 0;
                 const neighborOffsets = [-1, 1, -(segments + 1), (segments + 1)];
@@ -615,21 +620,35 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
             const basinDepth = 1.7; // Create a basin
             positions[i * 3 + 1] = h + bedrockLimit - basinDepth;
             waterDepths[i] = 1.5;   // Pre-fill with water
+            treeResistance[i] = 0;
+            hardness[i] = initialHardness;
         } else {
             positions[i * 3 + 1] = h + bedrockLimit;
             waterDepths[i] = 0;
+
+            // --- Forest Detection & Automatic Planting ---
+            if (forestData && forestData[i] === 1) {
+                treeResistance[i] = 1.0; // Stabilize ground
+                hardness[i] = 1.0;      // Harder soil due to roots
+
+                // Randomly place a 3D tree marker to visualize the forest
+                // (Don't place on every vertex to keep performance balanced)
+                if (Math.random() < 0.35) { // ~35% density for visual representation
+                    const vx = positions[i * 3];
+                    const vy = positions[i * 3 + 1];
+                    const vz = positions[i * 3 + 2];
+                    const marker = createTreeMarker(new THREE.Vector3(vx, vy, vz));
+                    state.addTree(marker, i);
+                }
+            } else {
+                treeResistance[i] = 0;
+                hardness[i] = initialHardness;
+            }
         }
 
-        // Reset sub-systems for the new terrain
-        hardness[i] = initialHardness;
+        // Reset other sub-systems
         sediment[i] = 0;
-        treeResistance[i] = 0;
     }
-
-    // Clear structures
-    state.clearTrees();
-    state.clearHouses();
-    state.clearWaterSources();
 
     geometry.attributes.position.needsUpdate = true;
     updateTerrainColors();

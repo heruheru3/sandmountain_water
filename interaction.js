@@ -663,9 +663,9 @@ export function initInteraction() {
         confirmImportBtn.textContent = "Fetching...";
 
         try {
-            // Fetch terrain precisely within selection bounds (Auto-zoom)
-            const preciseHeights = await fetchGSITerrainInBounds(bounds, segments);
-            terrainModule.setHeightData(preciseHeights, targetRange, initialHardness, naturalScale);
+            // Fetch terrain and forest data precisely within selection bounds (Auto-zoom)
+            const { heights, forestData } = await fetchGSITerrainInBounds(bounds, segments);
+            terrainModule.setHeightData(heights, targetRange, initialHardness, naturalScale, forestData);
             hideMapModal();
         } catch (err) {
             console.error(err);
