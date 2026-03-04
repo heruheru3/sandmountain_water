@@ -62,8 +62,8 @@ export function spawnSourceWater() {
         let gridX = Math.round((source.x + terrainWidth / 2) / terrainWidth * segments);
         let gridZ = Math.round((source.z + terrainDepth / 2) / terrainDepth * segments);
 
-        // Generate a unique color for each source
-        const tint = new THREE.Color().setHSL((0.6 + sIdx * 0.15) % 1.0, 0.8, 0.6);
+        // Use the persistent color stored in the source object
+        const tint = source.color;
 
         // Color a 3x3 area to prevent blue edges due to averaging in updateWaterMesh
         for (let dz = -1; dz <= 1; dz++) {

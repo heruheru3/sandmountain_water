@@ -199,6 +199,43 @@ export function initTerrain() {
     updateTerrainColors();
     geometry.attributes.position.needsUpdate = true;
     geometry.computeVertexNormals();
+
+    createNorthIndicator();
+}
+
+function createNorthIndicator() {
+    const arrowDir = new THREE.Vector3(0, 0, -1);
+    const arrowOrigin = new THREE.Vector3(0, 1, -terrainDepth / 2 - 2);
+    const arrowLength = 10;
+    const arrowColor = 0xff3333; // Red for North
+    const headLength = 3;
+    const headWidth = 2;
+
+    const arrow = new THREE.ArrowHelper(arrowDir, arrowOrigin, arrowLength, arrowColor, headLength, headWidth);
+    scene.add(arrow);
+
+    // Create a simple 3D "N" label
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+    const geo = new THREE.CylinderGeometry(0.3, 0.3, 4, 8);
+
+    // Left vertical
+    const n1 = new THREE.Mesh(geo, mat);
+    n1.position.set(-1.5, 0, 0);
+    group.add(n1);
+
+    // Right vertical
+    const n2 = new THREE.Mesh(geo, mat);
+    n2.position.set(1.5, 0, 0);
+    group.add(n2);
+
+    // Diagonal
+    const n3 = new THREE.Mesh(geo, mat);
+    n3.rotation.z = -Math.PI / 5;
+    group.add(n3);
+
+    group.position.set(0, 2, -terrainDepth / 2 - 15);
+    scene.add(group);
 }
 
 export function updateWaterMesh() {
@@ -499,14 +536,14 @@ export function buildHouse(point) {
     }
 }
 
-export function createSourceMarker(point) {
+export function createSourceMarker(point, color = null) {
     const group = new THREE.Group();
 
     // Sphere Marker
     const sphereGeo = new THREE.SphereGeometry(0.8, 16, 16);
     const sphereMat = new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        emissive: 0x0088ff,
+        color: color || 0x00ffff,
+        emissive: color || 0x0088ff,
         emissiveIntensity: 2,
         transparent: true,
         opacity: 0.7
@@ -519,10 +556,10 @@ export function createSourceMarker(point) {
     const streamHeight = point.y + sourceMarkerHeight;
     const streamGeo = new THREE.CylinderGeometry(0.2, 0.4, streamHeight, 8);
     const streamMat = new THREE.MeshStandardMaterial({
-        color: 0x3a86ff,
+        color: color || 0x3a86ff,
         transparent: true,
         opacity: 0.5,
-        emissive: 0x3a86ff,
+        emissive: color || 0x3a86ff,
         emissiveIntensity: 0.5
     });
     const stream = new THREE.Mesh(streamGeo, streamMat);

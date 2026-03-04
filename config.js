@@ -79,4 +79,4 @@ export const treeRadius = 5.0;           // 樹木が地盤を固める半径
 export const houseHardness = 1.0;        // 建物による地盤の硬化具合
 export const houseRadius = 8.0;          // 建物が地盤を固める半径
 // --- 地形インポートの設定 ---
-export const defaultHeightRange = 100; // インポート時の高低差の初期値
+export const defaultHeightRange = 40; // インポート時の高低差の初期値

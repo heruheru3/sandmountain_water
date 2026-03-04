@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity, defaultSourceEmission, defaultShowGrid } from './config.js';
 
 export let brushRadius = defaultBrushRadius;
@@ -121,11 +122,17 @@ export function loadSavedSettings() {
     }
 }
 
-export let waterSources = []; // [{id, x, z, marker, idx}]
+export let waterSources = []; // [{id, x, z, marker, idx, color}]
+let sourceColorIndex = 0;
 
-export function addWaterSource(x, z, marker, idx) {
+export function getNextSourceColor() {
+    return new THREE.Color().setHSL((0.6 + sourceColorIndex * 0.15) % 1.0, 0.8, 0.6);
+}
+
+export function addWaterSource(x, z, marker, idx, color) {
     const id = Date.now();
-    waterSources.push({ id, x, z, marker, idx });
+    waterSources.push({ id, x, z, marker, idx, color });
+    sourceColorIndex++;
     return id;
 }
 
@@ -147,6 +154,7 @@ export function clearWaterSources() {
         }
     });
     waterSources = [];
+    sourceColorIndex = 0;
 }
 
 export function checkRain() {

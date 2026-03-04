@@ -152,13 +152,14 @@ export function initInteraction() {
         const intersects = raycaster.intersectObject(terrainModule.terrain);
         if (intersects.length > 0) {
             const p = intersects[0].point;
-            const marker = terrainModule.createSourceMarker(p);
+            const color = state.getNextSourceColor();
+            const marker = terrainModule.createSourceMarker(p, color);
 
             const gx = Math.round((p.x + terrainWidth / 2) / terrainWidth * segments);
             const gz = Math.round((p.z + terrainDepth / 2) / terrainDepth * segments);
             const idx = gz * (segments + 1) + gx;
 
-            state.addWaterSource(p.x, p.z, marker, idx);
+            state.addWaterSource(p.x, p.z, marker, idx, color);
         }
     }
 
