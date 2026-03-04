@@ -506,11 +506,23 @@ export function initInteraction() {
             updatePlantingUI(false);
             updateHouseUI(false);
 
+            const normalizeCheck = document.getElementById('normalizeHeight');
             const heightInput = document.getElementById('targetHeightRange');
             const heightVal = document.getElementById('targetHeightRangeVal');
+            const heightGroup = document.getElementById('heightRangeGroup');
+
+            const hardnessInput = document.getElementById('importHardness');
+            const hardnessVal = document.getElementById('importHardnessVal');
+
+            if (normalizeCheck) normalizeCheck.checked = state.normalizeHeight;
             if (heightInput) {
-                heightInput.value = defaultHeightRange;
-                if (heightVal) heightVal.textContent = defaultHeightRange;
+                heightInput.value = state.targetHeightRange;
+                if (heightVal) heightVal.textContent = state.targetHeightRange;
+            }
+            if (heightGroup) heightGroup.style.display = state.normalizeHeight ? 'flex' : 'none';
+            if (hardnessInput) {
+                hardnessInput.value = state.importHardness;
+                if (hardnessVal) hardnessVal.textContent = state.importHardness;
             }
 
             mapModal.style.display = 'flex';
@@ -637,8 +649,15 @@ export function initInteraction() {
 
     confirmImportBtn.addEventListener('click', async () => {
         const bounds = mapMarker.getBounds();
-        const targetRange = parseFloat(document.getElementById('targetHeightRange').value) || defaultHeightRange;
         const initialHardness = parseFloat(document.getElementById('importHardness').value) || 1.0;
+        const targetRange = state.normalizeHeight ? state.targetHeightRange : null;
+
+        // Calculate natural scale factor (proportional to real-world dimensions)
+        // This prevents the "skyscraper" effect when normalization is OFF.
+        const sw = bounds.getSouthWest();
+        const se = bounds.getSouthEast();
+        const geoWidthMeters = sw.distanceTo(se);
+        const naturalScale = terrainWidth / (geoWidthMeters || 1000); // 200 units / distance in meters
 
         confirmImportBtn.disabled = true;
         confirmImportBtn.textContent = "Fetching...";
@@ -646,7 +665,7 @@ export function initInteraction() {
         try {
             // Fetch terrain precisely within selection bounds (Auto-zoom)
             const preciseHeights = await fetchGSITerrainInBounds(bounds, segments);
-            terrainModule.setHeightData(preciseHeights, targetRange, initialHardness);
+            terrainModule.setHeightData(preciseHeights, targetRange, initialHardness, naturalScale);
             hideMapModal();
         } catch (err) {
             console.error(err);
@@ -659,9 +678,23 @@ export function initInteraction() {
 
     const targetHeightRange = document.getElementById('targetHeightRange');
     const targetHeightRangeVal = document.getElementById('targetHeightRangeVal');
+    const normalizeHeightCheck = document.getElementById('normalizeHeight');
+    const heightRangeGroup = document.getElementById('heightRangeGroup');
+
     if (targetHeightRange && targetHeightRangeVal) {
         targetHeightRange.addEventListener('input', (e) => {
-            targetHeightRangeVal.textContent = e.target.value;
+            const val = parseInt(e.target.value);
+            targetHeightRangeVal.textContent = val;
+            state.setTargetHeightRange(val);
+        });
+    }
+
+    if (normalizeHeightCheck) {
+        normalizeHeightCheck.addEventListener('change', (e) => {
+            state.setNormalizeHeight(e.target.checked);
+            if (heightRangeGroup) {
+                heightRangeGroup.style.display = e.target.checked ? 'flex' : 'none';
+            }
         });
     }
 
@@ -669,7 +702,9 @@ export function initInteraction() {
     const importHardnessVal = document.getElementById('importHardnessVal');
     if (importHardness && importHardnessVal) {
         importHardness.addEventListener('input', (e) => {
-            importHardnessVal.textContent = e.target.value;
+            const val = parseFloat(e.target.value);
+            importHardnessVal.textContent = val;
+            state.setImportHardness(val);
         });
     }
 

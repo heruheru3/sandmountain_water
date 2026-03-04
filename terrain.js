@@ -572,7 +572,7 @@ export function createSourceMarker(point, color = null) {
     return group;
 }
 
-export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0) {
+export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0, naturalScale = 0.1) {
     const positions = geometry.attributes.position.array;
 
     // Find min and max height to normalize
@@ -584,18 +584,30 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
     }
 
     const currentRange = maxH - minH;
-    // Scale factor to make (max - min) equal to targetRange
-    const scale = currentRange > 0 ? targetRange / currentRange : 1.0;
+    // Scale factor to make (max - min) equal to targetRange, or use naturalScale if normalization is off
+    const isNormalizing = targetRange !== null && targetRange !== undefined;
+    const scale = isNormalizing ? (currentRange > 0 ? targetRange / currentRange : 1.0) : naturalScale;
 
     for (let i = 0; i < heights.length; i++) {
+        const rawH = heights[i];
+
         // Shift entire terrain up so minimum point is at bedrockLimit
-        // This prevents flattening of the bottom terrain which causes water leaks
-        const h = (heights[i] - minH) * scale;
-        positions[i * 3 + 1] = h + bedrockLimit;
+        const h = (rawH - minH) * scale;
+
+        // --- Sea/Water Handling ---
+        // GSI dem_png uses 0 for sea level/no data.
+        // If we detect it's basically 0 (sea level), we lower the bottom to create a basin and fill with water.
+        if (rawH <= 0.01) {
+            const basinDepth = 1.7; // Lower terrain by 2m for sea areas
+            positions[i * 3 + 1] = h + bedrockLimit - basinDepth;
+            waterDepths[i] = 1.5;   // Pre-fill with 1.5m of water
+        } else {
+            positions[i * 3 + 1] = h + bedrockLimit;
+            waterDepths[i] = 0;
+        }
 
         // Reset sub-systems for the new terrain
         hardness[i] = initialHardness;
-        waterDepths[i] = 0;
         sediment[i] = 0;
         treeResistance[i] = 0;
     }

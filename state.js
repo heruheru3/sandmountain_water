@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity, defaultSourceEmission, defaultShowGrid } from './config.js';
+import { defaultBrushRadius, defaultBuildStrength, defaultRainRadius, defaultRainCount, defaultSmoothing, defaultMaxFlowFactor, defaultBrushSharpness, defaultMaxSlope, defaultWaterOpacity, defaultSourceEmission, defaultShowGrid, defaultHeightRange } from './config.js';
 
 export let brushRadius = defaultBrushRadius;
 export let buildStrength = defaultBuildStrength;
@@ -12,6 +12,9 @@ export let maxSlope = defaultMaxSlope;
 export let waterOpacity = defaultWaterOpacity;
 export let sourceEmission = defaultSourceEmission;
 export let showGrid = defaultShowGrid;
+export let targetHeightRange = defaultHeightRange;
+export let normalizeHeight = true;
+export let importHardness = 1.0;
 
 export let isDrawing = false;
 export let isRightClicking = false;
@@ -42,6 +45,9 @@ export function setMaxSlope(val) { maxSlope = val; updateSetting('maxSlope', val
 export function setWaterOpacity(val) { waterOpacity = val; updateSetting('waterOpacity', val); }
 export function setSourceEmission(val) { sourceEmission = val; updateSetting('sourceEmission', val); }
 export function setShowGrid(val) { showGrid = val; updateSetting('showGrid', val); }
+export function setTargetHeightRange(val) { targetHeightRange = val; updateSetting('targetHeightRange', val); }
+export function setNormalizeHeight(val) { normalizeHeight = val; updateSetting('normalizeHeight', val); }
+export function setImportHardness(val) { importHardness = val; updateSetting('importHardness', val); }
 
 export function setDrawing(val) { isDrawing = val; }
 export function setRightClicking(val) { isRightClicking = val; }
@@ -119,6 +125,9 @@ export function loadSavedSettings() {
         if (settings.waterOpacity !== undefined) waterOpacity = settings.waterOpacity;
         if (settings.sourceEmission !== undefined) sourceEmission = settings.sourceEmission;
         if (settings.showGrid !== undefined) showGrid = settings.showGrid;
+        if (settings.targetHeightRange !== undefined) targetHeightRange = settings.targetHeightRange;
+        if (settings.normalizeHeight !== undefined) normalizeHeight = settings.normalizeHeight;
+        if (settings.importHardness !== undefined) importHardness = settings.importHardness;
     }
 }
 
