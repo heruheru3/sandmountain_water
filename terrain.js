@@ -572,7 +572,7 @@ export function createSourceMarker(point, color = null) {
     return group;
 }
 
-export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0, naturalScale = 0.1, forestData = null) {
+export function setHeightData(heights, targetRange = defaultHeightRange, initialHardness = 1.0, naturalScale = 0.1, forestData = null, autoPlaceWaterCount = 0) {
     const positions = geometry.attributes.position.array;
 
     // Clear structures first to avoid double-processing
@@ -592,6 +592,9 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
     // Scale factor to make (max - min) equal to targetRange, or use naturalScale if normalization is off
     const isNormalizing = targetRange !== null && targetRange !== undefined;
     const scale = isNormalizing ? (currentRange > 0 ? targetRange / currentRange : 1.0) : naturalScale;
+
+    // To find highest points for auto water sources
+    let highPoints = [];
 
     for (let i = 0; i < heights.length; i++) {
         const rawH = heights[i];
@@ -623,8 +626,17 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
             treeResistance[i] = 0;
             hardness[i] = initialHardness;
         } else {
-            positions[i * 3 + 1] = h + bedrockLimit;
+            const finalH = h + bedrockLimit;
+            positions[i * 3 + 1] = finalH;
             waterDepths[i] = 0;
+
+            // Collect potential high points (avoiding margins)
+            if (autoPlaceWaterCount > 0) {
+                const margin = 10;
+                if (xIdx >= margin && xIdx <= segments - margin && zIdx >= margin && zIdx <= segments - margin) {
+                    highPoints.push({ h: finalH, i, x: positions[i * 3], z: positions[i * 3 + 2] });
+                }
+            }
 
             // --- Forest Detection & Automatic Planting ---
             if (forestData && forestData[i] === 1) {
@@ -632,7 +644,6 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
                 hardness[i] = 1.0;      // Harder soil due to roots
 
                 // Randomly place a 3D tree marker to visualize the forest
-                // (Don't place on every vertex to keep performance balanced)
                 if (Math.random() < 0.35) { // ~35% density for visual representation
                     const vx = positions[i * 3];
                     const vy = positions[i * 3 + 1];
@@ -648,6 +659,33 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
 
         // Reset other sub-systems
         sediment[i] = 0;
+    }
+
+    // Auto-place water sources
+    if (autoPlaceWaterCount > 0 && highPoints.length > 0) {
+        highPoints.sort((a, b) => b.h - a.h);
+
+        // 1. Identify top 10 distinct "candidate peaks"
+        const candidates = [];
+        for (let p of highPoints) {
+            if (candidates.length >= 10) break;
+            const tooClose = candidates.some(s => {
+                const dx = s.x - p.x;
+                const dz = s.z - p.z;
+                return (dx * dx + dz * dz) < 900; // 30 units distance
+            });
+            if (!tooClose) candidates.push(p);
+        }
+
+        // 2. Randomly pick specified count from those candidates
+        const shuffled = candidates.sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, Math.min(autoPlaceWaterCount, candidates.length));
+
+        selected.forEach(p => {
+            const color = state.getNextSourceColor();
+            const marker = createSourceMarker(new THREE.Vector3(p.x, p.h, p.z), color);
+            state.addWaterSource(p.x, p.z, marker, p.i, color);
+        });
     }
 
     geometry.attributes.position.needsUpdate = true;

@@ -135,6 +135,16 @@
                 <div id="map-container" style="height: 400px; width: 100%; border-radius: 8px;"></div>
                 <div class="modal-info">
                     <span id="coord-display">Lat: ---, Lng: ---</span>
+                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label style="color: #94a3b8; font-size: 0.85rem;">Auto-place Water Sources (High
+                                elevation)</label>
+                            <span id="autoWaterSourcesVal"
+                                style="color: #60a5fa; font-size: 0.85rem; font-weight: bold;">0</span>
+                        </div>
+                        <input type="range" id="autoWaterSources" min="0" max="10" value="0" step="1"
+                            style="width: 100%;">
+                    </div>
                     <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
                         <input type="checkbox" id="normalizeHeight" checked style="width: auto;">
                         <label for="normalizeHeight" style="color: #94a3b8; font-size: 0.85rem;">Normalize Height (Scale

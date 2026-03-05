@@ -514,7 +514,14 @@ export function initInteraction() {
             const hardnessInput = document.getElementById('importHardness');
             const hardnessVal = document.getElementById('importHardnessVal');
 
+            const autoWaterInput = document.getElementById('autoWaterSources');
+            const autoWaterVal = document.getElementById('autoWaterSourcesVal');
+
             if (normalizeCheck) normalizeCheck.checked = state.normalizeHeight;
+            if (autoWaterInput) {
+                autoWaterInput.value = state.autoWaterSources;
+                if (autoWaterVal) autoWaterVal.textContent = state.autoWaterSources;
+            }
             if (heightInput) {
                 heightInput.value = state.targetHeightRange;
                 if (heightVal) heightVal.textContent = state.targetHeightRange;
@@ -665,7 +672,7 @@ export function initInteraction() {
         try {
             // Fetch terrain and forest data precisely within selection bounds (Auto-zoom)
             const { heights, forestData } = await fetchGSITerrainInBounds(bounds, segments);
-            terrainModule.setHeightData(heights, targetRange, initialHardness, naturalScale, forestData);
+            terrainModule.setHeightData(heights, targetRange, initialHardness, naturalScale, forestData, state.autoWaterSources);
             hideMapModal();
         } catch (err) {
             console.error(err);
@@ -700,6 +707,16 @@ export function initInteraction() {
 
     const importHardness = document.getElementById('importHardness');
     const importHardnessVal = document.getElementById('importHardnessVal');
+    const autoWaterSourcesInput = document.getElementById('autoWaterSources');
+    const autoWaterSourcesVal = document.getElementById('autoWaterSourcesVal');
+    if (autoWaterSourcesInput && autoWaterSourcesVal) {
+        autoWaterSourcesInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            autoWaterSourcesVal.textContent = val;
+            state.setAutoWaterSources(val);
+        });
+    }
+
     if (importHardness && importHardnessVal) {
         importHardness.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
