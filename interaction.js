@@ -207,6 +207,27 @@ export function initInteraction() {
         }
     });
 
+    window.addEventListener('wheel', (e) => {
+        if (e.target.closest('#ui-container')) return;
+        if (e.target.closest('.modal-overlay:not(.modal-hidden)')) return;
+
+        // "Zoom towards cursor" logic
+        // Find the intersection point on the terrain
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(terrainModule.terrain);
+        if (intersects.length > 0) {
+            const cursorPoint = intersects[0].point;
+
+            // Move both target AND camera by the same vector.
+            // This shifts the view horizontally/vertically without rotating the viewport,
+            // which handles the "swaying" issue when looking from a top-down perspective.
+            const shift = new THREE.Vector3().subVectors(cursorPoint, controls.target).multiplyScalar(0.1);
+
+            controls.target.add(shift);
+            camera.position.add(shift);
+        }
+    }, { passive: true });
+
     const uiToggle = document.getElementById('ui-toggle');
     const uiContainer = document.getElementById('ui-container');
     if (uiToggle && uiContainer) {
