@@ -193,7 +193,14 @@ export function initTerrain() {
 
         hardness[i] = 1.0;
         waterDepths[i] = 0;
+        nextWaterDepths[i] = 0;
         sediment[i] = 0;
+        nextSediment[i] = 0;
+        // Reset colors
+        waterColors[i * 4] = baseWaterColor.r;
+        waterColors[i * 4 + 1] = baseWaterColor.g;
+        waterColors[i * 4 + 2] = baseWaterColor.b;
+        waterColors[i * 4 + 3] = 1.0;
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     updateTerrainColors();
@@ -579,6 +586,17 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
     state.clearTrees();
     state.clearHouses();
     state.clearWaterSources();
+
+    const baseBlue = new THREE.Color(0x3a86ff);
+    for (let i = 0; i < waterDepths.length; i++) {
+        // Essential: Clear previous water color tints
+        waterColors[i * 4] = baseBlue.r;
+        waterColors[i * 4 + 1] = baseBlue.g;
+        waterColors[i * 4 + 2] = baseBlue.b;
+        waterColors[i * 4 + 3] = 1.0;
+        nextWaterDepths[i] = 0;
+        nextSediment[i] = 0;
+    }
 
     // Find min and max height to normalize
     let minH = Infinity;
