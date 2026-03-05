@@ -31,7 +31,16 @@ async function getTileData(tx, ty, zoom) {
     const data = await new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
+        const timeout = setTimeout(() => {
+            img.onload = null;
+            img.onerror = null;
+            img.src = ""; // Stop loading
+            console.warn("DEM tile timeout:", url);
+            resolve(new Float32Array(256 * 256).fill(0));
+        }, 10000);
+
         img.onload = () => {
+            clearTimeout(timeout);
             const canvas = document.createElement("canvas");
             canvas.width = 256;
             canvas.height = 256;
@@ -45,6 +54,7 @@ async function getTileData(tx, ty, zoom) {
             resolve(heights);
         };
         img.onerror = () => {
+            clearTimeout(timeout);
             console.warn("Missing DEM tile, treating as sea level:", url);
             resolve(new Float32Array(256 * 256).fill(0));
         };
@@ -63,7 +73,16 @@ async function getMapTileData(tx, ty, zoom) {
     const data = await new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
+        const timeout = setTimeout(() => {
+            img.onload = null;
+            img.onerror = null;
+            img.src = "";
+            console.warn("PHOTO tile timeout:", url);
+            resolve(null);
+        }, 10000);
+
         img.onload = () => {
+            clearTimeout(timeout);
             const canvas = document.createElement("canvas");
             canvas.width = 256;
             canvas.height = 256;
@@ -72,6 +91,7 @@ async function getMapTileData(tx, ty, zoom) {
             resolve(ctx.getImageData(0, 0, 256, 256).data);
         };
         img.onerror = () => {
+            clearTimeout(timeout);
             console.warn("Missing PHOTO tile:", url);
             resolve(null);
         };
