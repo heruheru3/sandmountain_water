@@ -70,6 +70,14 @@
                     <input type="checkbox" id="showGrid">
                     <label for="showGrid">Show Grid</label>
                 </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="showEdgeBarrier">
+                    <label for="showEdgeBarrier">Edge Barrier</label>
+                </div>
+            </div>
+            <div id="barrierHeightRow" class="slider-row" style="display: none;">
+                <label for="edgeBarrierHeight">Barrier Height: <span id="edgeBarrierHeightVal">10.0</span></label>
+                <input type="range" id="edgeBarrierHeight" min="1.0" max="50.0" step="0.5" value="10.0">
             </div>
             <div class="button-row">
                 <button id="globalRainBtn">Global Rain: OFF</button>
@@ -134,6 +142,13 @@
                 <p>Select a 1km x 1km area to import. (GSI Maps elevation data)</p>
                 <div id="map-container" style="height: 400px; width: 100%; border-radius: 8px;"></div>
                 <div class="modal-info">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <label style="color: #60a5fa; font-weight: bold; font-size: 0.9rem;">Terrain Data Source:</label>
+                        <select id="terrainSource" style="background: #1e293b; color: #f1f5f9; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; outline: none;">
+                            <option value="japan">Japan (GSI 10m DEM)</option>
+                            <option value="global">Global (AWS/Esri DEM)</option>
+                        </select>
+                    </div>
                     <span id="coord-display">Lat: ---, Lng: ---</span>
                     <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">

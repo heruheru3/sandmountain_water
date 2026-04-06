@@ -123,7 +123,11 @@ export function updateTerrainColors(point = null, radius = null) {
 
                 let targetColor;
                 if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
-                    targetColor = colorBorder;
+                    if (state.showEdgeBarrier) {
+                        targetColor = colorRock; // Wall color
+                    } else {
+                        targetColor = colorBorder; // Normal border
+                    }
                 } else if (treeResistance[i] > 1.5) {
                     // House (Fixed gray)
                     targetColor = colorRock;
@@ -153,7 +157,11 @@ export function updateTerrainColors(point = null, radius = null) {
 
             let targetColor;
             if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
-                targetColor = colorBorder;
+                if (state.showEdgeBarrier) {
+                    targetColor = colorRock;
+                } else {
+                    targetColor = colorBorder;
+                }
             } else if (treeResistance[i] > 1.5) {
                 targetColor = colorRock;
             } else if (treeResistance[i] > 0.5) {
@@ -203,11 +211,42 @@ export function initTerrain() {
         waterColors[i * 4 + 3] = 1.0;
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    updateEdgeBarrier(); // Apply barrier if active
     updateTerrainColors();
     geometry.attributes.position.needsUpdate = true;
     geometry.computeVertexNormals();
 
     createNorthIndicator();
+}
+
+/**
+ * Updates the height of the edge vertices to create a "wall" barrier.
+ */
+export function updateEdgeBarrier() {
+    const positions = geometry.attributes.position.array;
+    for (let i = 0; i < (segments + 1) * (segments + 1); i++) {
+        const xIdx = i % (segments + 1);
+        const zIdx = Math.floor(i / (segments + 1));
+        
+        if (xIdx === 0 || xIdx === segments || zIdx === 0 || zIdx === segments) {
+            // It's an edge vertex
+            if (state.showEdgeBarrier) {
+                // Find highest point in current terrain to base the barrier height or use absolute?
+                // Let's use current terrain height + barrier height for a clean look
+                // But actually, just setting them to a fixed high value is most reliable for simulation
+                positions[i * 3 + 1] = Math.max(positions[i * 3 + 1], state.edgeBarrierHeight);
+            } else {
+                // If barrier is OFF, usually the edge is at minimum or ground level.
+                // However, since we might have imported terrain, we don't want to "flatten" 
+                // meaningful edges unless it was actually a barrier. 
+                // For now, if someone toggles it OFF, we just stay at current height.
+                // Resetting to bedrock is only safe during full init/import.
+            }
+        }
+    }
+    geometry.attributes.position.needsUpdate = true;
+    updateTerrainColors();
+    geometry.computeVertexNormals();
 }
 
 function createNorthIndicator() {
@@ -707,6 +746,7 @@ export function setHeightData(heights, targetRange = defaultHeightRange, initial
     }
 
     geometry.attributes.position.needsUpdate = true;
+    updateEdgeBarrier();
     updateTerrainColors();
     geometry.computeVertexNormals();
 }

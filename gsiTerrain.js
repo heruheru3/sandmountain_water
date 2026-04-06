@@ -1,13 +1,21 @@
 import { segments } from './config.js';
+import * as state from './state.js';
 
 /**
- * GSI Elevation Tile Decoding
+ * GSI Elevation Tile Decoding (Japan)
  */
 function decodeGSIHeight(r, g, b) {
     let x = r * 65536 + g * 256 + b;
     if (x === 8388608) return 0; // Invalid
     if (x < 8388608) return x * 0.01;
     return (x - 16777216) * 0.01;
+}
+
+/**
+ * AWS Terrarium Tile Decoding (Global)
+ */
+function decodeGlobalHeight(r, g, b) {
+    return (r * 256 + g + b / 256) - 32768;
 }
 
 /**
@@ -24,17 +32,25 @@ function latLngToTileFloat(lat, lng, zoom) {
 const tileCache = new Map();
 
 async function getTileData(tx, ty, zoom) {
-    const key = `dem/${zoom}/${tx}/${ty}`;
+    const source = state.terrainSource;
+    const key = `dem/${source}/${zoom}/${tx}/${ty}`;
     if (tileCache.has(key)) return tileCache.get(key);
 
-    const url = `https://cyberjapandata.gsi.go.jp/xyz/dem_png/${zoom}/${tx}/${ty}.png`;
+    let url;
+    if (source === 'japan') {
+        url = `https://cyberjapandata.gsi.go.jp/xyz/dem_png/${zoom}/${tx}/${ty}.png`;
+    } else {
+        // AWS Terrarium Tiles (Global)
+        url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${zoom}/${tx}/${ty}.png`;
+    }
+
     const data = await new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";
         const timeout = setTimeout(() => {
             img.onload = null;
             img.onerror = null;
-            img.src = ""; // Stop loading
+            img.src = "";
             console.warn("DEM tile timeout:", url);
             resolve(new Float32Array(256 * 256).fill(0));
         }, 10000);
@@ -49,7 +65,11 @@ async function getTileData(tx, ty, zoom) {
             const imageData = ctx.getImageData(0, 0, 256, 256).data;
             const heights = new Float32Array(256 * 256);
             for (let i = 0; i < 256 * 256; i++) {
-                heights[i] = decodeGSIHeight(imageData[i * 4], imageData[i * 4 + 1], imageData[i * 4 + 2]);
+                if (source === 'japan') {
+                    heights[i] = decodeGSIHeight(imageData[i * 4], imageData[i * 4 + 1], imageData[i * 4 + 2]);
+                } else {
+                    heights[i] = decodeGlobalHeight(imageData[i * 4], imageData[i * 4 + 1], imageData[i * 4 + 2]);
+                }
             }
             resolve(heights);
         };
@@ -66,10 +86,18 @@ async function getTileData(tx, ty, zoom) {
 }
 
 async function getMapTileData(tx, ty, zoom) {
-    const key = `map/${zoom}/${tx}/${ty}`;
+    const source = state.terrainSource;
+    const key = `map/${source}/${zoom}/${tx}/${ty}`;
     if (tileCache.has(key)) return tileCache.get(key);
 
-    const url = `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${zoom}/${tx}/${ty}.jpg`;
+    let url;
+    if (source === 'japan') {
+        url = `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${zoom}/${tx}/${ty}.jpg`;
+    } else {
+        // Esri World Imagery (Global)
+        url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${ty}/${tx}`;
+    }
+
     const data = await new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "Anonymous";

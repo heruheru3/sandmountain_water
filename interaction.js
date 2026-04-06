@@ -343,6 +343,34 @@ export function initInteraction() {
         showGridToggle.checked = state.showGrid;
     }
 
+    const showEdgeBarrierToggle = document.getElementById('showEdgeBarrier');
+    const barrierHeightRow = document.getElementById('barrierHeightRow');
+    const edgeBarrierHeightSlider = document.getElementById('edgeBarrierHeight');
+    const edgeBarrierHeightVal = document.getElementById('edgeBarrierHeightVal');
+
+    if (showEdgeBarrierToggle) {
+        showEdgeBarrierToggle.checked = state.showEdgeBarrier;
+        if (barrierHeightRow) barrierHeightRow.style.display = state.showEdgeBarrier ? 'block' : 'none';
+        
+        showEdgeBarrierToggle.addEventListener('change', () => {
+            state.setShowEdgeBarrier(showEdgeBarrierToggle.checked);
+            if (barrierHeightRow) barrierHeightRow.style.display = state.showEdgeBarrier ? 'block' : 'none';
+            terrainModule.updateEdgeBarrier();
+        });
+    }
+
+    if (edgeBarrierHeightSlider) {
+        edgeBarrierHeightSlider.value = state.edgeBarrierHeight;
+        if (edgeBarrierHeightVal) edgeBarrierHeightVal.textContent = state.edgeBarrierHeight.toFixed(1);
+
+        edgeBarrierHeightSlider.addEventListener('input', () => {
+            const val = parseFloat(edgeBarrierHeightSlider.value);
+            state.setEdgeBarrierHeight(val);
+            if (edgeBarrierHeightVal) edgeBarrierHeightVal.textContent = val.toFixed(1);
+            terrainModule.updateEdgeBarrier();
+        });
+    }
+
     if (rainRadiusSlider) {
         rainRadiusSlider.addEventListener('input', () => {
             state.setRainRadius(parseFloat(rainRadiusSlider.value));
@@ -516,6 +544,8 @@ export function initInteraction() {
     const coordDisplay = document.getElementById('coord-display');
     let map = null;
     let mapMarker = null;
+    let gsiLayer = null;
+    let globalLayer = null;
 
     if (importTerrainBtn) {
         importTerrainBtn.addEventListener('click', () => {
@@ -535,9 +565,11 @@ export function initInteraction() {
             const hardnessInput = document.getElementById('importHardness');
             const hardnessVal = document.getElementById('importHardnessVal');
 
+            const sourceSelect = document.getElementById('terrainSource');
             const autoWaterInput = document.getElementById('autoWaterSources');
             const autoWaterVal = document.getElementById('autoWaterSourcesVal');
 
+            if (sourceSelect) sourceSelect.value = state.terrainSource;
             if (normalizeCheck) normalizeCheck.checked = state.normalizeHeight;
             if (autoWaterInput) {
                 autoWaterInput.value = state.autoWaterSources;
@@ -582,37 +614,79 @@ export function initInteraction() {
     closeMapModal.addEventListener('click', hideMapModal);
 
     function initMap() {
-        if (map) return;
-        // Mount Fuji center
-        const startPos = [35.3606, 138.7274];
-        map = L.map('map-container').setView(startPos, 14);
-        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-            attribution: '&copy; Geospatial Information Authority of Japan'
-        }).addTo(map);
+        const startPos = state.terrainSource === 'japan' ? [35.3606, 138.7274] : [25.075, 55.227]; // Fuji or Dubai
 
-        // Selection rectangle (roughly 2km x 2km to match Z14 tile)
-        const rectSize = 0.02; // Approx 2.2km in lat degree
-        const bounds = [
-            [startPos[0] - rectSize / 2, startPos[1] - rectSize / 2],
-            [startPos[0] + rectSize / 2, startPos[1] + rectSize / 2]
-        ];
-        mapMarker = L.rectangle(bounds, { color: "#ff7800", weight: 2, fillOpacity: 0.2 }).addTo(map);
+        if (!map) {
+            map = L.map('map-container').setView(startPos, 14);
 
-        // Enable resizing and dragging via Geoman
-        mapMarker.pm.enable({
-            draggable: true,
-            snappable: false
-        });
+            gsiLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+                attribution: '&copy; GSI Japan'
+            });
+            globalLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri World Imagery'
+            });
 
+            const sourceSelect = document.getElementById('terrainSource');
+            if (sourceSelect) {
+                sourceSelect.addEventListener('change', (e) => {
+                    const newSource = e.target.value;
+                    state.setTerrainSource(newSource);
+                    syncMapToSource();
+                });
+            }
+
+            // Selection rectangle (roughly 2km x 2km to match Z14 tile)
+            const rectSize = 0.02; // Approx 2.2km in lat degree
+            const bounds = [
+                [startPos[0] - rectSize / 2, startPos[1] - rectSize / 2],
+                [startPos[0] + rectSize / 2, startPos[1] + rectSize / 2]
+            ];
+            mapMarker = L.rectangle(bounds, { color: "#ff7800", weight: 2, fillOpacity: 0.2 }).addTo(map);
+
+            // Enable resizing and dragging via Geoman
+            mapMarker.pm.enable({
+                draggable: true,
+                snappable: false
+            });
+
+            // ... (rest of the mapMarker listeners stay the same)
+            setupMapListeners();
+        }
+
+        // Always sync UI and View when modal opens
+        syncMapToSource();
+    }
+
+    function syncMapToSource() {
+        if (!map) return;
+        const isJapan = state.terrainSource === 'japan';
+        const targetPos = isJapan ? [35.3606, 138.7274] : [25.075, 55.227];
+
+        if (isJapan) {
+            if (map.hasLayer(globalLayer)) map.removeLayer(globalLayer);
+            gsiLayer.addTo(map);
+        } else {
+            if (map.hasLayer(gsiLayer)) map.removeLayer(gsiLayer);
+            globalLayer.addTo(map);
+        }
+        
+        // Only jump if it's a major switch or initial load
+        // checking distance to avoid resetting view if user is already browsing
+        const currentCenter = map.getCenter();
+        const dist = currentCenter.distanceTo(L.latLng(targetPos));
+        if (dist > 50000) { // 50km
+            map.setView(targetPos, 14);
+        }
+    }
+
+    function setupMapListeners() {
         const updateCoords = () => {
             const center = mapMarker.getBounds().getCenter();
             coordDisplay.textContent = `Lat: ${center.lat.toFixed(4)}, Lng: ${center.lng.toFixed(4)}`;
         };
 
-        // Initial coordinate display
         updateCoords();
 
-        // Update marker position when map moves, but only if not being explicitly dragged/edited
         let isInteractingWithMarker = false;
         mapMarker.on('pm:dragstart pm:markerdragstart', () => { isInteractingWithMarker = true; });
 
@@ -639,7 +713,6 @@ export function initInteraction() {
         });
 
         map.on('movestart', () => {
-            // Hide handles while panning to avoid lag/drift
             if (!isInteractingWithMarker) mapMarker.pm.disable();
         });
 
@@ -660,7 +733,6 @@ export function initInteraction() {
         });
 
         map.on('moveend', () => {
-            // Show handles again once the map stops
             if (!isInteractingWithMarker) {
                 mapMarker.pm.enable({
                     draggable: true,
@@ -669,7 +741,6 @@ export function initInteraction() {
             }
         });
 
-        // Add a global safety reset for the flag
         window.addEventListener('mouseup', () => {
             setTimeout(() => { isInteractingWithMarker = false; }, 100);
         });

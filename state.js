@@ -16,6 +16,9 @@ export let targetHeightRange = defaultHeightRange;
 export let normalizeHeight = true;
 export let importHardness = 1.0;
 export let autoWaterSources = 0;
+export let terrainSource = 'japan'; // 'japan' or 'global'
+export let showEdgeBarrier = false;
+export let edgeBarrierHeight = 10.0;
 
 export let isDrawing = false;
 export let isRightClicking = false;
@@ -50,6 +53,9 @@ export function setTargetHeightRange(val) { targetHeightRange = val; updateSetti
 export function setNormalizeHeight(val) { normalizeHeight = val; updateSetting('normalizeHeight', val); }
 export function setImportHardness(val) { importHardness = val; updateSetting('importHardness', val); }
 export function setAutoWaterSources(val) { autoWaterSources = val; updateSetting('autoWaterSources', val); }
+export function setTerrainSource(val) { terrainSource = val; updateSetting('terrainSource', val); }
+export function setShowEdgeBarrier(val) { showEdgeBarrier = val; updateSetting('showEdgeBarrier', val); }
+export function setEdgeBarrierHeight(val) { edgeBarrierHeight = val; updateSetting('edgeBarrierHeight', val); }
 
 export function setDrawing(val) { isDrawing = val; }
 export function setRightClicking(val) { isRightClicking = val; }
@@ -134,6 +140,9 @@ export function loadSavedSettings() {
             autoWaterSources = parseInt(settings.autoWaterSources);
             if (isNaN(autoWaterSources)) autoWaterSources = 0;
         }
+        if (settings.terrainSource !== undefined) terrainSource = settings.terrainSource;
+        if (settings.showEdgeBarrier !== undefined) showEdgeBarrier = settings.showEdgeBarrier;
+        if (settings.edgeBarrierHeight !== undefined) edgeBarrierHeight = settings.edgeBarrierHeight;
     }
 }
 
